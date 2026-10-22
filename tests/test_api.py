@@ -14,8 +14,55 @@ Tests the complete Legal-BERT SaaS API specifications:
 import pytest
 from fastapi.testclient import TestClient
 from analysis.api import app, MAX_SOURCE_LENGTH
+import analysis.db as db
 
 client = TestClient(app)
+
+@pytest.fixture(autouse=True)
+def seed_test_audit():
+    db.init_db()
+    test_record = {
+        "analysisId": "audit-101",
+        "contractName": "VulnerableEscrow.sol",
+        "contractType": "Solidity Smart Contract",
+        "solidityCode": SAMPLE_VALID_CONTRACT,
+        "solidityVersion": "^0.8.20",
+        "status": "completed",
+        "riskScore": 88,
+        "riskLevel": "Critical",
+        "riskBreakdown": {
+            "Privacy": 10,
+            "Termination": 95,
+            "Legal Compliance": 60,
+            "Liability": 40,
+            "Payment / Financial": 85
+        },
+        "categories": [
+            {"name": "Privacy", "riskLevel": "Low", "score": 10},
+            {"name": "Termination", "riskLevel": "Critical", "score": 95},
+            {"name": "Legal Compliance", "riskLevel": "Medium", "score": 60},
+            {"name": "Liability", "riskLevel": "Low", "score": 40},
+            {"name": "Payment / Financial", "riskLevel": "High", "score": 85}
+        ],
+        "findings": [
+            {
+                "findingId": "find-1",
+                "category": "Termination",
+                "severity": "Critical",
+                "title": "Privileged Selfdestruct Routine",
+                "description": "Contract contains selfdestruct capable of sweeping balance.",
+                "snippet": "selfdestruct(payable(owner));",
+                "lineNumbers": [36]
+            }
+        ],
+        "shapValues": [{"token": "selfdestruct", "value": 0.82, "category": "Termination"}],
+        "limeExplanations": [{"token": "selfdestruct", "weight": 0.78, "type": "risk"}],
+        "recommendations": [{"id": "rec-1", "category": "Termination", "suggestion": "Constrain termination."}],
+        "complianceMatrix": [{"area": "Consumer Law", "assessment": "Potential Hazard", "status": "Warning"}],
+        "summary": "Legal-BERT analysis identified critical unilateral termination hazards.",
+        "metadata": {"engineType": "legal_bert_ml_engine", "analysisModelVersion": "legal-bert-multi-label-v1.0"}
+    }
+    db.insert_analysis(test_record)
 
 SAMPLE_VALID_CONTRACT = """// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
@@ -288,4 +335,47 @@ def test_accurate_line_numbers_and_saliency():
             assert 1 <= ln <= data["metadata"]["linesOfCode"]
         assert "snippet" in finding
         assert finding["snippet"] != ""
+
+
+def test_backend_vercel_entrypoints():
+    """Verify backend and Vercel entrypoint modules expose the FastAPI app."""
+    from backend.main import app as main_app
+    from backend.api.index import app as vercel_app
+    assert main_app is not None
+    assert vercel_app is not None
+    assert main_app.title == "Smart Contract Analyser API"
+    assert vercel_app.title == "Smart Contract Analyser API"
+
+
+def test_synchronous_file_upload_validation_and_analysis():
+    """Verify POST /api/v1/analyze/upload performs synchronous analysis and handles errors."""
+    # 1. Invalid extension
+    bad_file = ("bad.txt", b"plain text", "text/plain")
+    res_bad = client.post("/api/v1/analyze/upload", files={"file": bad_file})
+    assert res_bad.status_code == 400
+    assert res_bad.json()["detail"]["code"] == "INVALID_FILE_TYPE"
+
+    # 2. Valid .sol file upload
+    sol_file = ("SimpleEscrow.sol", SAMPLE_VALID_CONTRACT.encode("utf-8"), "application/octet-stream")
+    res_valid = client.post("/api/v1/analyze/upload", files={"file": sol_file})
+    assert res_valid.status_code == 200
+    data = res_valid.json()
+    assert "analysisId" in data
+    assert data["contractName"] == "SimpleEscrow"
+    assert "riskScore" in data
+
+
+def test_cors_headers():
+    """Verify CORS middleware headers are properly applied."""
+    response = client.options(
+        "/api/v1/analyze",
+        headers={
+            "Origin": "http://localhost:5173",
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "content-type",
+        }
+    )
+    assert response.status_code == 200
+    assert response.headers.get("access-control-allow-origin") == "http://localhost:5173"
+
 

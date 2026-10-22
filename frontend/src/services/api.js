@@ -93,7 +93,7 @@ async function request(endpoint, options = {}) {
     } else if (response.status === 429) {
       errorMessage = 'Rate limit exceeded (maximum 10 submissions per minute). Please wait 60 seconds before submitting again.';
     } else if (response.status === 413) {
-      errorMessage = 'Source code exceeds maximum permitted payload size of 2MB.';
+      errorMessage = 'Source code exceeds maximum permitted payload size of 1MB.';
     } else if (response.status === 400) {
       errorMessage = 'Invalid or empty Solidity smart contract submitted.';
     } else if (response.status === 422) {
@@ -169,10 +169,21 @@ export const api = {
     if (contractName) formData.append('contract_name', contractName);
     if (description) formData.append('description', description);
 
-    return await request('/api/v1/analyze/upload', {
+    const data = await request('/api/v1/analyze/upload', {
       method: 'POST',
       body: formData,
     });
+
+    if (data?.analysisId) {
+      memoryCache.set(data.analysisId, data);
+      try {
+        sessionStorage.setItem(`audit_${data.analysisId}`, JSON.stringify(data));
+      } catch (e) {
+        console.warn('Session storage write failed:', e);
+      }
+    }
+
+    return data;
   },
 
   /**

@@ -1,0 +1,10 @@
+Legal-BERT Fine-Tuning Execution Log
+============================================================
+Model: nlpaueb/legal-bert-base-uncased
+Dataset SHA-256: 74464fd132e9268220549adc8e5cfb31d4ca69b9fae203b31ae2924c1500e456
+Seed: 42, Epochs: 3, Batch Size: 4, LR: 3e-05
+Splits: Train=44, Validation=7 (Real-Only), Test=7 (Real-Only)
+Validation Macro F1 (All): 0.0000
+Test Macro F1 (All): 0.0000
+Test Macro F1 (Evaluable): 0.0000
+Thresholds: {'Privacy': 0.5, 'Termination': 0.5, 'Legal Compliance': 0.5, 'Liability': 0.5, 'Payment / Financial': 0.5}

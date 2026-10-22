@@ -178,8 +178,8 @@ const NewAnalysis = () => {
       return;
     }
 
-    if (file.size > 2 * 1024 * 1024) {
-      setErrorMessage('Selected file exceeds the 2MB size limit.');
+    if (file.size > 1024 * 1024) {
+      setErrorMessage('Selected file exceeds the 1MB size limit.');
       return;
     }
 
@@ -233,19 +233,19 @@ const NewAnalysis = () => {
       return;
     }
 
-    if (solidityCode.length > 2 * 1024 * 1024) {
-      setErrorMessage('Source code exceeds maximum permitted payload size of 2MB.');
+    if (solidityCode.length > 1024 * 1024) {
+      setErrorMessage('Source code exceeds maximum permitted payload size of 1MB.');
       return;
     }
 
-    // Pre-flight check: ensure backend is reachable before initiating job
+    // Pre-flight check: ensure backend is reachable before initiating
     if (backendStatus === 'offline') {
       const activeUrl = api.getBaseUrl();
       const targetLabel = activeUrl ? `at ${activeUrl}` : 'on this domain';
       setErrorMessage(
         `Cannot initiate analysis: Backend service is currently unreachable ${targetLabel}. ` +
         `If running locally, please start the backend service on port 8000. ` +
-        `If using the deployed website, configure VITE_API_BASE_URL in your hosting provider's settings pointing to the running backend container.`
+        `If using the deployed website, configure VITE_API_BASE_URL in your Vercel project environment variables pointing to the running backend service.`
       );
       return;
     }
@@ -253,67 +253,27 @@ const NewAnalysis = () => {
     if (backendStatus === 'model_unavailable') {
       setErrorMessage(
         'Cannot initiate analysis: Legal-BERT model weights (legal_bert_v3.3.0) are unavailable on the backend. ' +
-        'Please ensure the model checkpoint is placed in analysis/models/legal_bert_v3.3.0/.'
+        'Please ensure the model checkpoint is placed in analysis/models/legal_bert_v3.3.0/ or MODEL_WEIGHTS_URL is configured.'
       );
       return;
     }
 
-    // Begin live asynchronous pipeline processing
+    // Begin synchronous pipeline processing
     setIsAnalyzing(true);
-    setCurrentStepIndex(0);
-    setRealProgress(15);
-    setRealStageMessage('Validating Solidity syntax and structure...');
-    setRealStageName('Validating');
+    setCurrentStepIndex(3);
+    setRealProgress(50);
+    setRealStageName('Neural Inference & Explainability');
+    setRealStageMessage('Executing Legal-BERT multi-label inference & computing genuine SHAP/LIME attributions...');
 
     try {
-      // 1. Initiate backend job
-      const job = await api.startAnalysisJob(solidityCode, contractName, description);
-      const jobId = job.jobId;
-
-      // Stage index mapping for PIPELINE_STAGES (8 stages)
-      const stageMap = {
-        validating: 0,
-        preprocessing: 1,
-        tokenizing: 2,
-        inferring: 3,
-        synthesizing: 4,
-        completed: 7,
-      };
-
-      // 2. Poll real job status
-      const pollInterval = setInterval(async () => {
-        try {
-          const statusRes = await api.getJobStatus(jobId);
-          setRealProgress(statusRes.progress || 20);
-          setRealStageMessage(statusRes.stageMessage || 'Executing Legal-BERT analysis...');
-          setRealStageName(statusRes.stage || 'Inference');
-
-          if (typeof stageMap[statusRes.stage] === 'number') {
-            setCurrentStepIndex(stageMap[statusRes.stage]);
-          }
-
-          if (statusRes.status === 'completed') {
-            clearInterval(pollInterval);
-            setIsAnalyzing(false);
-            const finalResult = statusRes.result;
-            navigate(`/analysis/${finalResult.analysisId}`, {
-              state: { analysisResult: finalResult }
-            });
-          } else if (statusRes.status === 'failed') {
-            clearInterval(pollInterval);
-            setIsAnalyzing(false);
-            setErrorMessage(statusRes.error?.message || 'Analysis execution failed on the backend.');
-          }
-        } catch (pollErr) {
-          clearInterval(pollInterval);
-          setIsAnalyzing(false);
-          setErrorMessage(pollErr.message || 'Lost connection to analysis job.');
-        }
-      }, 250);
-
+      const finalResult = await api.analyzeContract(solidityCode, contractName, description);
+      setIsAnalyzing(false);
+      navigate(`/analysis/${finalResult.analysisId}`, {
+        state: { analysisResult: finalResult }
+      });
     } catch (err) {
       setIsAnalyzing(false);
-      setErrorMessage(err.message || 'Analysis could not be started.');
+      setErrorMessage(err.message || 'Analysis execution failed on the backend.');
     }
   };
 

@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.onnx
+*.db
+*.sqlite
+*.sqlite3
+.env
+.env.local
+.env.*.local
+*.local
+!.env.example
+.pytest_cache/
