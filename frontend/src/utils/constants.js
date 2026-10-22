@@ -1,4 +1,4 @@
-export const APP_NAME = 'XAI Contact Analyser';
+export const APP_NAME = 'Smart Contract Analyser';
 export const APP_TAGLINE = 'Explainable AI Framework for Smart Contract Legal-Risk Assessment';
 
 /**

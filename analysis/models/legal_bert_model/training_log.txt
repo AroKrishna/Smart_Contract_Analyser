@@ -1,0 +1,10 @@
+Legal-BERT Checkpoint Evaluation Log
+============================================================
+Model Checkpoint: analysis/models/legal_bert_model
+Dataset SHA-256: 0048f456c4ef0704962bd9b11ed2604d5f697a689f9bb2b8d1ffaa70f7725c28
+Seed: 42
+Splits: Validation=7 (Real-Only), Test=7 (Real-Only)
+Validation Macro F1 (All): 0.0000
+Test Macro F1 (All): 0.0000
+Test Macro F1 (Evaluable): 0.0000
+Thresholds: {'Privacy': 0.5, 'Termination': 0.5, 'Legal Compliance': 0.5, 'Liability': 0.5, 'Payment / Financial': 0.5}

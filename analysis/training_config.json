@@ -1,0 +1,46 @@
+{
+  "model": {
+    "model_name_or_path": "nlpaueb/legal-bert-base-uncased",
+    "tokenizer_name": "nlpaueb/legal-bert-base-uncased",
+    "max_seq_length": 512,
+    "input_field": "model_text",
+    "problem_type": "multi_label_classification",
+    "num_labels": 5
+  },
+  "categories": [
+    "Privacy",
+    "Termination",
+    "Legal Compliance",
+    "Liability",
+    "Payment / Financial"
+  ],
+  "data": {
+    "dataset_path": "data/ml_candidates/final_dataset.jsonl",
+    "dataset_version": "v3.3.0",
+    "dataset_sha256": "74464fd132e9268220549adc8e5cfb31d4ca69b9fae203b31ae2924c1500e456",
+    "frozen": true,
+    "split_seed": 42,
+    "training_eligible_only": true,
+    "min_total_samples": 50,
+    "min_positive_per_category": 5,
+    "min_projects_for_split": 5,
+    "group_field": "project_id"
+  },
+  "training": {
+    "seed": 42,
+    "learning_rate": 3e-5,
+    "batch_size": 4,
+    "num_train_epochs": 3,
+    "weight_decay": 0.01,
+    "warmup_ratio": 0.1,
+    "eval_split_ratio": 0.2,
+    "test_split_ratio": 0.2,
+    "output_dir": "analysis/models/legal_bert_v3.3.0",
+    "logging_dir": "analysis/models/legal_bert_v3.3.0/logs"
+  },
+  "baseline": {
+    "model_type": "tfidf_logistic_regression",
+    "ngram_range": [1, 2],
+    "max_features": 2000
+  }
+}

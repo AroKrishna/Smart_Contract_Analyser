@@ -1,5 +1,5 @@
 /**
- * XAI Contact Analyser - Mock Data Container
+ * Smart Contract Analyser - Mock Data Container
  * Adheres strictly to the 5 primary risk categories:
  * - Privacy
  * - Termination

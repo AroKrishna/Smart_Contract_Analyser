@@ -33,10 +33,13 @@ const RiskSummary = ({ contract }) => {
             </div>
           </div>
 
-          <div className="mt-2 flex flex-col items-center gap-1.5">
+          <div className="mt-2 flex flex-col items-center gap-1">
             <Badge riskLevel={overallRiskLevel} size="lg" dot />
-            <span className="text-xs text-slate-400 font-mono">
-              Model Confidence: <span className="text-slate-200 font-semibold">{confidence}</span>
+            <span className="text-[11px] text-slate-400 font-mono text-center">
+              Score Activation: <span className="text-slate-200 font-semibold">{confidence}</span>
+            </span>
+            <span className="text-[10px] text-amber-400/80 font-mono">
+              (Uncalibrated Sigmoid — Not Probability)
             </span>
           </div>
         </div>

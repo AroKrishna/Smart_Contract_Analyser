@@ -2,11 +2,16 @@ import { CheckCircle2, Loader2, Cpu, ShieldCheck } from 'lucide-react';
 import Card from '../common/Card';
 import { PIPELINE_STAGES } from '../../utils/constants';
 
-const AnalysisProgress = ({ currentStepIndex = 0, contractName = 'Contract.sol' }) => {
-  const progressPercent = Math.min(
-    100,
-    Math.round(((currentStepIndex + 1) / PIPELINE_STAGES.length) * 100)
-  );
+const AnalysisProgress = ({
+  currentStepIndex = 0,
+  contractName = 'Contract.sol',
+  progressPercent: explicitProgress,
+  stageMessage = '',
+  stageName = '',
+}) => {
+  const progressPercent = typeof explicitProgress === 'number'
+    ? explicitProgress
+    : Math.min(100, Math.round(((currentStepIndex + 1) / PIPELINE_STAGES.length) * 100));
 
   return (
     <div className="max-w-2xl mx-auto py-8">
@@ -23,10 +28,18 @@ const AnalysisProgress = ({ currentStepIndex = 0, contractName = 'Contract.sol' 
             Analyzing <span className="font-mono text-slate-300 font-semibold">{contractName}</span> for potential pre-deployment legal risks
           </p>
 
+          {/* Real Backend Status Banner */}
+          {stageMessage && (
+            <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-950/60 border border-blue-500/30 text-blue-300 text-xs font-mono">
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-400 shrink-0" />
+              <span>{stageMessage}</span>
+            </div>
+          )}
+
           {/* Progress Bar */}
           <div className="mt-5 space-y-1.5">
             <div className="flex justify-between text-xs text-slate-400">
-              <span>Pipeline Stage {currentStepIndex + 1} of {PIPELINE_STAGES.length}</span>
+              <span>{stageName || `Pipeline Stage ${currentStepIndex + 1} of ${PIPELINE_STAGES.length}`}</span>
               <span className="font-mono text-blue-400 font-semibold">{progressPercent}%</span>
             </div>
             <div className="h-2 w-full bg-slate-950 rounded-full overflow-hidden border border-slate-800">

@@ -1,0 +1,97 @@
+{
+  "hamming_loss": 0.1429,
+  "macro_f1_all_categories": 0.16,
+  "macro_f1_evaluable_categories": 0.4,
+  "evaluable_categories": [
+    "Termination",
+    "Legal Compliance"
+  ],
+  "micro_f1": 0.4444,
+  "categories": {
+    "Privacy": {
+      "train_support_pos": 5,
+      "test_support_pos": 0,
+      "test_support_neg": 7,
+      "predicted_pos": 0,
+      "true_positives": 0,
+      "false_positives": 0,
+      "true_negatives": 7,
+      "false_negatives": 0,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support_status": "inconclusive_zero_positive_support",
+      "evaluation_note": "Evaluation inconclusive: test split contains 0 true positive examples. Recall/F1 cannot be measured.",
+      "model_type": "logistic_regression"
+    },
+    "Termination": {
+      "train_support_pos": 3,
+      "test_support_pos": 3,
+      "test_support_neg": 4,
+      "predicted_pos": 2,
+      "true_positives": 2,
+      "false_positives": 0,
+      "true_negatives": 4,
+      "false_negatives": 1,
+      "precision": 1.0,
+      "recall": 0.6667,
+      "f1": 0.8,
+      "support_status": "sufficient_support",
+      "evaluation_note": "Evaluated on 3 true positive(s) and 4 true negative(s).",
+      "model_type": "logistic_regression"
+    },
+    "Legal Compliance": {
+      "train_support_pos": 5,
+      "test_support_pos": 4,
+      "test_support_neg": 3,
+      "predicted_pos": 0,
+      "true_positives": 0,
+      "false_positives": 0,
+      "true_negatives": 3,
+      "false_negatives": 4,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support_status": "sufficient_support",
+      "evaluation_note": "Evaluated on 4 true positive(s) and 3 true negative(s).",
+      "model_type": "logistic_regression"
+    },
+    "Liability": {
+      "train_support_pos": 5,
+      "test_support_pos": 0,
+      "test_support_neg": 7,
+      "predicted_pos": 0,
+      "true_positives": 0,
+      "false_positives": 0,
+      "true_negatives": 7,
+      "false_negatives": 0,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support_status": "inconclusive_zero_positive_support",
+      "evaluation_note": "Evaluation inconclusive: test split contains 0 true positive examples. Recall/F1 cannot be measured.",
+      "model_type": "logistic_regression"
+    },
+    "Payment / Financial": {
+      "train_support_pos": 6,
+      "test_support_pos": 0,
+      "test_support_neg": 7,
+      "predicted_pos": 0,
+      "true_positives": 0,
+      "false_positives": 0,
+      "true_negatives": 7,
+      "false_negatives": 0,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support_status": "inconclusive_zero_positive_support",
+      "evaluation_note": "Evaluation inconclusive: test split contains 0 true positive examples. Recall/F1 cannot be measured.",
+      "model_type": "logistic_regression"
+    }
+  },
+  "calculation_notes": {
+    "macro_f1_all_categories": "Unweighted mean across all 5 categories; categories with 0 positive test examples contribute 0.0.",
+    "macro_f1_evaluable_categories": "Mean F1 computed only across categories with >= 1 positive test example (['Termination', 'Legal Compliance']).",
+    "micro_f1": "Globally aggregated binary precision and recall across all label decisions."
+  }
+}

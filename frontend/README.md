@@ -1,6 +1,6 @@
-# XAI Contact Analyser — Frontend Application
+# Smart Contract Analyser — Frontend Application
 
-This directory contains the React 19 + Vite + Tailwind CSS frontend application for **XAI Contact Analyser**.
+This directory contains the React 19 + Vite + Tailwind CSS frontend application for **Smart Contract Analyser**.
 
 ## Scripts
 

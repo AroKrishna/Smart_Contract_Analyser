@@ -4,13 +4,20 @@ import Card from '../common/Card';
 
 const CodeViewer = ({
   code = '',
-  highlightedLines = [20, 21, 26, 27],
+  highlightedLines: propHighlightedLines,
+  findings = [],
 }) => {
+  const lines = code ? code.split('\n') : [];
+
+  const hasDynamicFindings = Array.isArray(findings) && findings.length > 0;
+  const activeHighlightedLines = hasDynamicFindings
+    ? findings.flatMap((f) => f.lineNumbers || [])
+    : (propHighlightedLines || []);
 
   const [copied, setCopied] = useState(false);
-  const [selectedLine, setSelectedLine] = useState(20);
-
-  const lines = code ? code.split('\n') : [];
+  const [selectedLine, setSelectedLine] = useState(
+    activeHighlightedLines.length > 0 ? activeHighlightedLines[0] : (lines.length > 0 ? 1 : 0)
+  );
 
   const handleCopy = () => {
     navigator.clipboard.writeText(code);
@@ -19,24 +26,27 @@ const CodeViewer = ({
   };
 
   const getLineRisk = (lineNum) => {
-    if (lineNum === 20 || lineNum === 21) {
+    if (hasDynamicFindings) {
+      const match = findings.find((f) => (f.lineNumbers || []).includes(lineNum));
+      if (!match) return null;
+
+      const badgeClasses = {
+        Critical: 'bg-red-500/20 text-red-300 border-red-500/30',
+        High: 'bg-orange-500/20 text-orange-300 border-orange-500/30',
+        Medium: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+        Low: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+      };
+
       return {
-        level: 'Critical',
-        category: 'Termination',
-        clause: 'selfdestruct(owner);',
-        explanation: 'Unilateral termination allowing owner to kill contract and seize all remaining escrow balance without participant consent.',
-        badgeClass: 'bg-red-500/20 text-red-300 border-red-500/30',
+        level: match.severity || 'Medium',
+        category: match.category,
+        clause: match.snippet ? match.snippet.split('\n')[0] : match.title,
+        explanation: match.description,
+        regulatoryCitation: match.regulatoryCitation,
+        badgeClass: badgeClasses[match.severity] || badgeClasses.Medium,
       };
     }
-    if (lineNum === 26 || lineNum === 27) {
-      return {
-        level: 'Medium',
-        category: 'Payment / Financial',
-        clause: 'feeRate = newRate;',
-        explanation: 'Fee rate can be altered at will without an upper boundary ceiling or depositor notification period.',
-        badgeClass: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
-      };
-    }
+
     return null;
   };
 
@@ -65,7 +75,7 @@ const CodeViewer = ({
           <div className="min-w-[500px]">
             {lines.map((lineText, idx) => {
               const lineNum = idx + 1;
-              const isHighlighted = highlightedLines.includes(lineNum);
+              const isHighlighted = activeHighlightedLines.includes(lineNum);
               const isSelected = selectedLine === lineNum;
               const riskInfo = getLineRisk(lineNum);
 
@@ -147,6 +157,13 @@ const CodeViewer = ({
                 <p className="text-xs text-slate-300 leading-relaxed bg-slate-900/60 p-3 rounded-lg border border-slate-800">
                   {currentRisk.explanation}
                 </p>
+
+                {currentRisk.regulatoryCitation && (
+                  <div className="text-[10px] text-slate-400 font-mono bg-slate-950/40 p-2 rounded border border-slate-800/80">
+                    <span className="text-slate-500 uppercase tracking-wider text-[9px] block mb-0.5">Citation Benchmark:</span>
+                    {currentRisk.regulatoryCitation}
+                  </div>
+                )}
               </div>
             ) : (
               <div className="p-4 rounded-lg bg-slate-950/60 border border-slate-800 text-center text-xs text-slate-500">

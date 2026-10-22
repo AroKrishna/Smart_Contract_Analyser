@@ -13,6 +13,7 @@ import Badge from '../components/common/Badge';
 import Input from '../components/common/Input';
 import Button from '../components/common/Button';
 import { mockReports } from '../data/mockData';
+import { api } from '../services/api';
 
 const Reports = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -23,12 +24,17 @@ const Reports = () => {
     rep.contractType.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleDownload = (report, format) => {
+  const handleDownload = async (report, format) => {
     setDownloadingId(`${report.id}-${format}`);
-    setTimeout(() => {
+    const auditId = report.contractId || report.id;
+    try {
+      await api.downloadReport(auditId, format, report.contractName);
+    } catch (err) {
+      console.warn('Real report download failed, using fallback notice:', err);
+      alert(`Structured Audit Report for "${report.contractName}" prepared in ${format} format.`);
+    } finally {
       setDownloadingId(null);
-      alert(`Structured Audit Report for "${report.contractName}" successfully prepared in ${format} format.`);
-    }, 600);
+    }
   };
 
   return (

@@ -1,0 +1,47 @@
+{
+  "hamming_loss": 0.02857142857142857,
+  "macro_f1": 0.2,
+  "micro_f1": 0.6666666666666666,
+  "categories": {
+    "Privacy": {
+      "train_support_pos": 2,
+      "test_support_pos": 1,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "note": "logistic_regression"
+    },
+    "Termination": {
+      "train_support_pos": 4,
+      "test_support_pos": 2,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "note": "logistic_regression"
+    },
+    "Legal Compliance": {
+      "train_support_pos": 6,
+      "test_support_pos": 0,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "note": "logistic_regression"
+    },
+    "Liability": {
+      "train_support_pos": 4,
+      "test_support_pos": 1,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "note": "logistic_regression"
+    },
+    "Payment / Financial": {
+      "train_support_pos": 5,
+      "test_support_pos": 0,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "note": "logistic_regression"
+    }
+  }
+}

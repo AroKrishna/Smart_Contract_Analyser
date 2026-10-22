@@ -50,11 +50,21 @@ const RiskCard = ({ categories = [] }) => {
               </div>
 
               <div className="pt-3 border-t border-slate-800/80 space-y-2">
-                <div className="flex items-center justify-between text-xs font-mono">
-                  <span className="text-slate-400">Score: {cat.score}/100</span>
-                  <span className="text-slate-300">
-                    {cat.detectedClauses} {cat.detectedClauses === 1 ? 'clause' : 'clauses'} flagged
-                  </span>
+                <div className="flex flex-col gap-1 text-xs font-mono">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-400">Score: {cat.score}/100</span>
+                    <span className="text-slate-300">
+                      {cat.detectedClauses} {cat.detectedClauses === 1 ? 'clause' : 'clauses'} flagged
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-[10px]">
+                    <span className="text-amber-400/80 font-mono">Uncalibrated Sigmoid</span>
+                    {cat.supportStatus === 'inconclusive_zero_positive_support' ? (
+                      <span className="text-slate-500 font-mono">Zero Test Positives</span>
+                    ) : (
+                      <span className="text-slate-400 font-mono">Threshold: 0.50</span>
+                    )}
+                  </div>
                 </div>
 
                 {/* Progress bar */}

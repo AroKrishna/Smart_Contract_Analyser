@@ -1,0 +1,457 @@
+{
+  "manifest_version": "1.0.0",
+  "retrieval_date": "2026-10-22",
+  "target_milestone": "Benchmark Dataset Expansion Candidate Package",
+  "status": "candidate_package_pending_human_verification",
+  "human_verified": false,
+  "summary": {
+    "total_evaluated_candidates": 32,
+    "accepted_real_source_candidates": 16,
+    "excluded_candidates": 10,
+    "separated_synthetic_dev_candidates": 6,
+    "distinct_accepted_projects": 9
+  },
+  "accepted_candidates": [
+    {
+      "sample_id": "CAN-043",
+      "project_id": "openzeppelin_contracts",
+      "project_family": "OpenZeppelin-v1",
+      "contract_file": "Destructible.sol",
+      "function_name": "destroy",
+      "source_line_range": [
+        19,
+        21
+      ],
+      "source_repo_url": "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v1.12.0/contracts/lifecycle/Destructible.sol",
+      "commit_or_version": "0e65947efbffc592cffea8c2ae9d3b8e11659854",
+      "compiler_version": "^0.4.24",
+      "license": "MIT",
+      "license_status": "cleared",
+      "source_verification_status": "confirmed_in_upstream_source",
+      "key_hazard_supported": "Termination",
+      "positive_categories": [
+        "Termination"
+      ]
+    },
+    {
+      "sample_id": "CAN-044",
+      "project_id": "openzeppelin_contracts",
+      "project_family": "OpenZeppelin-v1",
+      "contract_file": "Destructible.sol",
+      "function_name": "destroyAndSend",
+      "source_line_range": [
+        23,
+        25
+      ],
+      "source_repo_url": "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v1.12.0/contracts/lifecycle/Destructible.sol",
+      "commit_or_version": "0e65947efbffc592cffea8c2ae9d3b8e11659854",
+      "compiler_version": "^0.4.24",
+      "license": "MIT",
+      "license_status": "cleared",
+      "source_verification_status": "confirmed_in_upstream_source",
+      "key_hazard_supported": "Termination",
+      "positive_categories": [
+        "Termination"
+      ]
+    },
+    {
+      "sample_id": "CAN-045",
+      "project_id": "crytic_not_so_smart_contracts",
+      "project_family": "Crytic-Unprotected",
+      "contract_file": "WalletLibrary.sol",
+      "function_name": "kill",
+      "source_line_range": [
+        223,
+        225
+      ],
+      "source_repo_url": "https://github.com/crytic/not-so-smart-contracts/blob/master/unprotected_function/WalletLibrary_source_code/WalletLibrary.sol",
+      "commit_or_version": "020dbdbde3e0c2e8de5f3944e7455e438b0995d5",
+      "compiler_version": "^0.4.15",
+      "license": "Apache-2.0",
+      "license_status": "cleared",
+      "source_verification_status": "confirmed_in_upstream_source",
+      "key_hazard_supported": "Termination & Legal Compliance",
+      "positive_categories": [
+        "Termination",
+        "Legal Compliance"
+      ]
+    },
+    {
+      "sample_id": "CAN-046",
+      "project_id": "crytic_not_so_smart_contracts",
+      "project_family": "Crytic-ForcedEther",
+      "contract_file": "coin.sol",
+      "function_name": "migrate_and_destroy",
+      "source_line_range": [
+        179,
+        182
+      ],
+      "source_repo_url": "https://github.com/crytic/not-so-smart-contracts/blob/master/forced_ether_reception/coin.sol",
+      "commit_or_version": "020dbdbde3e0c2e8de5f3944e7455e438b0995d5",
+      "compiler_version": "^0.4.15",
+      "license": "Apache-2.0",
+      "license_status": "cleared",
+      "source_verification_status": "confirmed_in_upstream_source",
+      "key_hazard_supported": "Termination",
+      "positive_categories": [
+        "Termination"
+      ]
+    },
+    {
+      "sample_id": "CAN-047",
+      "project_id": "crytic_not_so_smart_contracts",
+      "project_family": "Crytic-Honeypots",
+      "contract_file": "Lottery.sol",
+      "function_name": "kill",
+      "source_line_range": [
+        74,
+        78
+      ],
+      "source_repo_url": "https://github.com/crytic/not-so-smart-contracts/blob/master/honeypots/Lottery/Lottery.sol",
+      "commit_or_version": "020dbdbde3e0c2e8de5f3944e7455e438b0995d5",
+      "compiler_version": "^0.4.19",
+      "license": "Apache-2.0",
+      "license_status": "cleared",
+      "source_verification_status": "confirmed_in_upstream_source",
+      "key_hazard_supported": "Termination",
+      "positive_categories": [
+        "Termination"
+      ]
+    },
+    {
+      "sample_id": "CAN-048",
+      "project_id": "openzeppelin_contracts",
+      "project_family": "OpenZeppelin-v4",
+      "contract_file": "TimelockController.sol",
+      "function_name": "updateDelay",
+      "source_line_range": [
+        351,
+        356
+      ],
+      "source_repo_url": "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v4.9.0/contracts/governance/TimelockController.sol",
+      "commit_or_version": "54b3f14346da01ba0d159114b399197fea8b7cda",
+      "compiler_version": "^0.8.0",
+      "license": "MIT",
+      "license_status": "cleared",
+      "source_verification_status": "confirmed_in_upstream_source",
+      "key_hazard_supported": "Clean Negative Control",
+      "positive_categories": []
+    },
+    {
+      "sample_id": "CAN-049",
+      "project_id": "openzeppelin_contracts",
+      "project_family": "OpenZeppelin-v4",
+      "contract_file": "PaymentSplitter.sol",
+      "function_name": "release",
+      "source_line_range": [
+        145,
+        161
+      ],
+      "source_repo_url": "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v4.9.0/contracts/finance/PaymentSplitter.sol",
+      "commit_or_version": "54b3f14346da01ba0d159114b399197fea8b7cda",
+      "compiler_version": "^0.8.0",
+      "license": "MIT",
+      "license_status": "cleared",
+      "source_verification_status": "confirmed_in_upstream_source",
+      "key_hazard_supported": "Clean Negative Control",
+      "positive_categories": []
+    },
+    {
+      "sample_id": "CAN-050",
+      "project_id": "compound_protocol",
+      "project_family": "Compound-v2",
+      "contract_file": "CToken.sol",
+      "function_name": "_setReserveFactorFresh",
+      "source_line_range": [
+        936,
+        958
+      ],
+      "source_repo_url": "https://github.com/compound-finance/compound-protocol/blob/master/contracts/CToken.sol",
+      "commit_or_version": "a3214f67b73310d547e00fc578e8355911c9d376",
+      "compiler_version": "^0.5.16",
+      "license": "BSD-3-Clause",
+      "license_status": "cleared",
+      "source_verification_status": "confirmed_in_upstream_source",
+      "key_hazard_supported": "Clean Negative Control (Bounded Fee)",
+      "positive_categories": []
+    },
+    {
+      "sample_id": "CAN-051",
+      "project_id": "compound_protocol",
+      "project_family": "Compound-v2",
+      "contract_file": "Comptroller.sol",
+      "function_name": "_setCloseFactor",
+      "source_line_range": [
+        849,
+        858
+      ],
+      "source_repo_url": "https://github.com/compound-finance/compound-protocol/blob/master/contracts/Comptroller.sol",
+      "commit_or_version": "a3214f67b73310d547e00fc578e8355911c9d376",
+      "compiler_version": "^0.5.16",
+      "license": "BSD-3-Clause",
+      "license_status": "cleared",
+      "source_verification_status": "confirmed_in_upstream_source",
+      "key_hazard_supported": "Payment / Financial & Legal Compliance",
+      "positive_categories": [
+        "Payment / Financial",
+        "Legal Compliance"
+      ]
+    },
+    {
+      "sample_id": "CAN-052",
+      "project_id": "ens_domains",
+      "project_family": "ENS-Contracts",
+      "contract_file": "TextResolver.sol",
+      "function_name": "setText",
+      "source_line_range": [
+        18,
+        25
+      ],
+      "source_repo_url": "https://github.com/ensdomains/ens-contracts/blob/master/contracts/resolvers/profiles/TextResolver.sol",
+      "commit_or_version": "0b6f79ece082234c56a532b4c6fe983ea8e9e24b",
+      "compiler_version": ">=0.8.4",
+      "license": "MIT",
+      "license_status": "cleared",
+      "source_verification_status": "confirmed_in_upstream_source",
+      "key_hazard_supported": "Clean Negative Control (Privacy Counterexample)",
+      "positive_categories": []
+    },
+    {
+      "sample_id": "EXP-001",
+      "project_id": "uniswap_v3_adapter",
+      "project_family": "Uniswap-v3-Adapter",
+      "contract_file": "V3FeeAdapter.sol",
+      "function_name": "setDefaultFeeByFeeTier",
+      "source_line_range": [
+        98,
+        101
+      ],
+      "source_repo_url": "https://github.com/Uniswap/v3-fee-adapter/blob/main/src/V3FeeAdapter.sol",
+      "commit_or_version": "cantina_uniswap_nov2025",
+      "compiler_version": "^0.8.29",
+      "license": "MIT",
+      "license_status": "cleared",
+      "source_verification_status": "confirmed_in_forge_audit_source",
+      "key_hazard_supported": "Payment / Financial & Legal Compliance",
+      "positive_categories": [
+        "Payment / Financial",
+        "Legal Compliance"
+      ]
+    },
+    {
+      "sample_id": "EXP-002",
+      "project_id": "spectral_image_vaults",
+      "project_family": "Spectral-V2",
+      "contract_file": "AutonomousAgentDeployer.sol",
+      "function_name": "setParameter",
+      "source_line_range": [
+        470,
+        475
+      ],
+      "source_repo_url": "https://github.com/Spectral-Finance/spectral-contracts/blob/main/src/AutonomousAgentDeployer.sol",
+      "commit_or_version": "zenith_audit_2025",
+      "compiler_version": "0.8.20",
+      "license": "MIT",
+      "license_status": "cleared",
+      "source_verification_status": "confirmed_in_forge_audit_source",
+      "key_hazard_supported": "Legal Compliance",
+      "positive_categories": [
+        "Legal Compliance"
+      ]
+    },
+    {
+      "sample_id": "EXP-003",
+      "project_id": "spectral_image_vaults",
+      "project_family": "Spectral-V2",
+      "contract_file": "AgentToken.sol",
+      "function_name": "setTaxPercentage",
+      "source_line_range": [
+        120,
+        125
+      ],
+      "source_repo_url": "https://github.com/Spectral-Finance/spectral-contracts/blob/main/src/AgentToken.sol",
+      "commit_or_version": "zenith_audit_2025",
+      "compiler_version": "0.8.20",
+      "license": "MIT",
+      "license_status": "cleared",
+      "source_verification_status": "confirmed_in_forge_audit_source",
+      "key_hazard_supported": "Payment / Financial (100% Tax Setter)",
+      "positive_categories": [
+        "Payment / Financial"
+      ]
+    },
+    {
+      "sample_id": "EXP-004",
+      "project_id": "linea_contracts",
+      "project_family": "Linea-Rollup",
+      "contract_file": "RollupRevenueVault.sol",
+      "function_name": "updateInvoicePaymentReceiver",
+      "source_line_range": [
+        207,
+        215
+      ],
+      "source_repo_url": "https://github.com/Consensys/linea-contracts/blob/main/contracts/RollupRevenueVault.sol",
+      "commit_or_version": "consensys_diligence_2025",
+      "compiler_version": "^0.8.20",
+      "license": "Apache-2.0",
+      "license_status": "cleared",
+      "source_verification_status": "confirmed_in_forge_audit_source",
+      "key_hazard_supported": "Clean Control",
+      "positive_categories": []
+    },
+    {
+      "sample_id": "EXP-005",
+      "project_id": "the_compact",
+      "project_family": "The-Compact",
+      "contract_file": "AllocatorLogic.sol",
+      "function_name": "registerAllocator",
+      "source_line_range": [
+        80,
+        92
+      ],
+      "source_repo_url": "https://github.com/the-compact/compact-contracts/blob/main/src/AllocatorLogic.sol",
+      "commit_or_version": "audit_feb2025",
+      "compiler_version": "^0.8.27",
+      "license": "MIT",
+      "license_status": "cleared",
+      "source_verification_status": "confirmed_in_forge_audit_source",
+      "key_hazard_supported": "Clean Control",
+      "positive_categories": []
+    },
+    {
+      "sample_id": "EXP-006",
+      "project_id": "zk_token_distribution",
+      "project_family": "ZK-Sync-Era",
+      "contract_file": "ZkCappedMinter.sol",
+      "function_name": "mint",
+      "source_line_range": [
+        45,
+        55
+      ],
+      "source_repo_url": "https://github.com/matter-labs/zk-token/blob/main/contracts/ZkCappedMinter.sol",
+      "commit_or_version": "audit_2025",
+      "compiler_version": "0.8.24",
+      "license": "MIT",
+      "license_status": "cleared",
+      "source_verification_status": "confirmed_in_forge_audit_source",
+      "key_hazard_supported": "Clean Control (Bounded Minting)",
+      "positive_categories": []
+    }
+  ],
+  "excluded_candidates": [
+    {
+      "candidate_id": "EXC-001",
+      "project_name": "crytic_slither",
+      "contract_file": "suicidal.sol",
+      "license": "AGPL-3.0",
+      "exclusion_reason": "License restriction: AGPL-3.0 copyleft license requires separate legal review and cannot be admitted to permissive training sets without flagging license_review_required."
+    },
+    {
+      "candidate_id": "EXC-002",
+      "project_name": "defivulnlabs_sunweb3sec",
+      "contract_file": "Selfdestruct.sol",
+      "license": "Unclear / Unlicensed",
+      "exclusion_reason": "Missing permissive open-source license: File lacks verified SPDX license header; cannot be redistributed or trained on safely."
+    },
+    {
+      "candidate_id": "EXC-003",
+      "project_name": "zenith_ssi_protocol",
+      "contract_file": "USSI.sol",
+      "license": "BUSL-1.1",
+      "exclusion_reason": "License restriction: Business Source License 1.1 is proprietary / research-restricted and prohibited from commercial model training sets."
+    },
+    {
+      "candidate_id": "EXC-004",
+      "project_name": "zenith_ssi_protocol",
+      "contract_file": "AssetFactory.sol",
+      "license": "BUSL-1.1",
+      "exclusion_reason": "License restriction: Business Source License 1.1."
+    },
+    {
+      "candidate_id": "EXC-005",
+      "project_name": "zenith_ssi_protocol",
+      "contract_file": "AssetIssuer.sol",
+      "license": "BUSL-1.1",
+      "exclusion_reason": "License restriction: Business Source License 1.1."
+    },
+    {
+      "candidate_id": "EXC-006",
+      "project_name": "zenith_ssi_protocol",
+      "contract_file": "AssetLocking.sol",
+      "license": "BUSL-1.1",
+      "exclusion_reason": "License restriction: Business Source License 1.1."
+    },
+    {
+      "candidate_id": "EXC-007",
+      "project_name": "level_money",
+      "contract_file": "LevelReserveLensChainlinkOracle.sol",
+      "license": "BUSL-1.1",
+      "exclusion_reason": "License restriction: Business Source License 1.1."
+    },
+    {
+      "candidate_id": "EXC-008",
+      "project_name": "uniswap_unification",
+      "contract_file": "ResourceManager.sol",
+      "license": "AGPL-3.0-only",
+      "exclusion_reason": "License restriction: AGPL-3.0 copyleft license flagged for license review."
+    },
+    {
+      "candidate_id": "EXC-009",
+      "project_name": "uniswap_unification",
+      "contract_file": "UNIVesting.sol",
+      "license": "AGPL-3.0-only",
+      "exclusion_reason": "License restriction: AGPL-3.0 copyleft license flagged for license review."
+    },
+    {
+      "candidate_id": "EXC-010",
+      "project_name": "radius_technology_evmauth",
+      "contract_file": "EVMAuthExpiringERC1155.sol",
+      "license": "MIT",
+      "exclusion_reason": "Excerpt and audit defect: Audit finding references token burning accounting bug, but the bundled excerpt lacks inter-contract authorization context; cannot reliably evaluate operational compliance without missing base contracts."
+    }
+  ],
+  "separated_synthetic_candidates": [
+    {
+      "sample_id": "SYN-BM-01",
+      "original_id": "CAN-037",
+      "contract_file": "BM001_VulnerableEscrow.sol",
+      "classification": "Synthetic Toy Benchmark",
+      "handling": "Separated from real-source candidate pool. Prohibited from validation and test splits per benchmark expansion requirements."
+    },
+    {
+      "sample_id": "SYN-BM-02",
+      "original_id": "CAN-038",
+      "contract_file": "BM001_VulnerableEscrow.sol",
+      "classification": "Synthetic Toy Benchmark",
+      "handling": "Separated from real-source candidate pool."
+    },
+    {
+      "sample_id": "SYN-BM-03",
+      "original_id": "CAN-039",
+      "contract_file": "BM002_SafeTimelockedEscrow.sol",
+      "classification": "Synthetic Toy Benchmark",
+      "handling": "Separated from real-source candidate pool."
+    },
+    {
+      "sample_id": "SYN-BM-04",
+      "original_id": "CAN-040",
+      "contract_file": "BM003_UserIdentityRegistry.sol",
+      "classification": "Synthetic Toy Benchmark",
+      "handling": "Separated from real-source candidate pool."
+    },
+    {
+      "sample_id": "SYN-BM-05",
+      "original_id": "CAN-041",
+      "contract_file": "BM004_HighRiskStaking.sol",
+      "classification": "Synthetic Toy Benchmark",
+      "handling": "Separated from real-source candidate pool."
+    },
+    {
+      "sample_id": "SYN-BM-06",
+      "original_id": "CAN-042",
+      "contract_file": "BM005_StandardGovernanceToken.sol",
+      "classification": "Synthetic Toy Benchmark",
+      "handling": "Separated from real-source candidate pool."
+    }
+  ]
+}

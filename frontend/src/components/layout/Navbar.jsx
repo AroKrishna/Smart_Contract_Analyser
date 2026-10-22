@@ -43,16 +43,9 @@ const Navbar = () => {
 
           {/* Right Action Buttons */}
           <div className="hidden sm:flex items-center gap-3">
-            {location.pathname !== '/login' && (
-              <Link to="/login">
-                <Button variant="ghost" size="sm">
-                  Sign In
-                </Button>
-              </Link>
-            )}
-            <Link to="/dashboard">
+            <Link to="/analysis/new">
               <Button variant="primary" size="sm" icon={ArrowRight} iconPosition="right">
-                Dashboard
+                Audit Contract (No Login)
               </Button>
             </Link>
           </div>
@@ -106,18 +99,11 @@ const Navbar = () => {
               </a>
             </div>
           )}
-          <div className="pt-3 border-t border-slate-800 flex flex-col gap-2.5">
-            <Link to="/login" onClick={() => setMobileMenuOpen(false)} className="w-full">
-              <Button variant="secondary" size="md" className="w-full">
-                Sign In
-              </Button>
-            </Link>
-            <Link to="/dashboard" onClick={() => setMobileMenuOpen(false)} className="w-full">
+            <Link to="/analysis/new" onClick={() => setMobileMenuOpen(false)} className="w-full">
               <Button variant="primary" size="md" className="w-full">
-                Go to Dashboard
+                Audit Contract (No Login)
               </Button>
             </Link>
-          </div>
         </div>
       )}
     </header>

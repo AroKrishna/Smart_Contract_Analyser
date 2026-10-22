@@ -1,7 +1,7 @@
-# XAI Contact Analyser
+# Smart Contract Analyser
 
 ## Project Name
-XAI Contact Analyser
+Smart Contract Analyser
 
 ## Project Type
 Web-based AI SaaS application for analyzing Solidity smart contracts

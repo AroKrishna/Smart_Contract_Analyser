@@ -1,0 +1,96 @@
+{
+  "benchmark_version": "1.0.1",
+  "description": "Curated initial development/regression test suite of smart contracts representing operational governance and legal hazard patterns with clear provenance and licensing. Classified as 'dev' to prevent false claims of a held-out evaluation test set.",
+  "samples": [
+    {
+      "sample_id": "BM-001",
+      "project_name": "Synthetic-VulnerableEscrow-Project",
+      "contract_file": "BM001_VulnerableEscrow.sol",
+      "commit_or_version": "v1.0-benchmark",
+      "compiler_version": "^0.8.20",
+      "license": "MIT",
+      "source_url": "https://github.com/AroKrishna/Smart_Contract_Analyser/tree/main/analysis/data/contracts/BM001_VulnerableEscrow.sol",
+      "collection_date": "2026-10-21",
+      "split": "dev",
+      "labels": [
+        { "rule_id": "RULE-TERM-01", "category": "Termination", "expected_trigger": true, "rationale": "emergencyKill contains selfdestruct" },
+        { "rule_id": "RULE-FIN-01", "category": "Payment / Financial", "expected_trigger": true, "rationale": "setFee has no ceiling check" },
+        { "rule_id": "RULE-PRIV-01", "category": "Privacy", "expected_trigger": false, "rationale": "No PII state variables" },
+        { "rule_id": "RULE-LIAB-01", "category": "Liability", "expected_trigger": false, "rationale": "No liability disclaimer in NatSpec" },
+        { "rule_id": "RULE-GOV-01", "category": "Legal Compliance", "expected_trigger": false, "rationale": "Only 2 privileged functions" }
+      ]
+    },
+    {
+      "sample_id": "BM-002",
+      "project_name": "Synthetic-SafeEscrow-Project",
+      "contract_file": "BM002_SafeTimelockedEscrow.sol",
+      "commit_or_version": "v1.0-benchmark",
+      "compiler_version": "^0.8.20",
+      "license": "MIT",
+      "source_url": "https://github.com/AroKrishna/Smart_Contract_Analyser/tree/main/analysis/data/contracts/BM002_SafeTimelockedEscrow.sol",
+      "collection_date": "2026-10-21",
+      "split": "dev",
+      "labels": [
+        { "rule_id": "RULE-TERM-01", "category": "Termination", "expected_trigger": false, "rationale": "No selfdestruct present" },
+        { "rule_id": "RULE-FIN-01", "category": "Payment / Financial", "expected_trigger": false, "rationale": "setFee contains MAX_FEE cap check" },
+        { "rule_id": "RULE-PRIV-01", "category": "Privacy", "expected_trigger": false, "rationale": "No PII state variables" },
+        { "rule_id": "RULE-LIAB-01", "category": "Liability", "expected_trigger": false, "rationale": "No liability disclaimer in NatSpec" },
+        { "rule_id": "RULE-GOV-01", "category": "Legal Compliance", "expected_trigger": false, "rationale": "Safe escrow with cap" }
+      ]
+    },
+    {
+      "sample_id": "BM-003",
+      "project_name": "Synthetic-IdentityRegistry-Project",
+      "contract_file": "BM003_UserIdentityRegistry.sol",
+      "commit_or_version": "v1.0-benchmark",
+      "compiler_version": "^0.8.20",
+      "license": "MIT",
+      "source_url": "https://github.com/AroKrishna/Smart_Contract_Analyser/tree/main/analysis/data/contracts/BM003_UserIdentityRegistry.sol",
+      "collection_date": "2026-10-21",
+      "split": "dev",
+      "labels": [
+        { "rule_id": "RULE-TERM-01", "category": "Termination", "expected_trigger": false, "rationale": "No selfdestruct present" },
+        { "rule_id": "RULE-FIN-01", "category": "Payment / Financial", "expected_trigger": false, "rationale": "No fee setter" },
+        { "rule_id": "RULE-PRIV-01", "category": "Privacy", "expected_trigger": true, "rationale": "userEmail and physicalAddress plaintext string variables" },
+        { "rule_id": "RULE-LIAB-01", "category": "Liability", "expected_trigger": false, "rationale": "No liability disclaimer in NatSpec" },
+        { "rule_id": "RULE-GOV-01", "category": "Legal Compliance", "expected_trigger": false, "rationale": "No privileged governance functions" }
+      ]
+    },
+    {
+      "sample_id": "BM-004",
+      "project_name": "Synthetic-HighRiskStaking-Project",
+      "contract_file": "BM004_HighRiskStaking.sol",
+      "commit_or_version": "v1.0-benchmark",
+      "compiler_version": "^0.8.20",
+      "license": "MIT",
+      "source_url": "https://github.com/AroKrishna/Smart_Contract_Analyser/tree/main/analysis/data/contracts/BM004_HighRiskStaking.sol",
+      "collection_date": "2026-10-21",
+      "split": "dev",
+      "labels": [
+        { "rule_id": "RULE-TERM-01", "category": "Termination", "expected_trigger": false, "rationale": "No selfdestruct present" },
+        { "rule_id": "RULE-FIN-01", "category": "Payment / Financial", "expected_trigger": true, "rationale": "setTax modifies tax without upper cap" },
+        { "rule_id": "RULE-PRIV-01", "category": "Privacy", "expected_trigger": false, "rationale": "No PII state variables" },
+        { "rule_id": "RULE-LIAB-01", "category": "Liability", "expected_trigger": true, "rationale": "NatSpec contains 'as is without warranty' and 'no liability whatsoever'" },
+        { "rule_id": "RULE-GOV-01", "category": "Legal Compliance", "expected_trigger": false, "rationale": "Single admin function" }
+      ]
+    },
+    {
+      "sample_id": "BM-005",
+      "project_name": "OpenZeppelin-Style-GovToken-Project",
+      "contract_file": "BM005_StandardGovernanceToken.sol",
+      "commit_or_version": "v1.0-benchmark",
+      "compiler_version": "^0.8.20",
+      "license": "MIT",
+      "source_url": "https://github.com/AroKrishna/Smart_Contract_Analyser/tree/main/analysis/data/contracts/BM005_StandardGovernanceToken.sol",
+      "collection_date": "2026-10-21",
+      "split": "dev",
+      "labels": [
+        { "rule_id": "RULE-TERM-01", "category": "Termination", "expected_trigger": false, "rationale": "Standard ERC20 with no killswitch" },
+        { "rule_id": "RULE-FIN-01", "category": "Payment / Financial", "expected_trigger": false, "rationale": "No fee alterations" },
+        { "rule_id": "RULE-PRIV-01", "category": "Privacy", "expected_trigger": false, "rationale": "No PII state variables" },
+        { "rule_id": "RULE-LIAB-01", "category": "Liability", "expected_trigger": false, "rationale": "No liability disclaimer" },
+        { "rule_id": "RULE-GOV-01", "category": "Legal Compliance", "expected_trigger": false, "rationale": "Zero admin backdoors" }
+      ]
+    }
+  ]
+}

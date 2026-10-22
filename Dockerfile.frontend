@@ -1,0 +1,38 @@
+# ==============================================================================
+# Smart Contract Analyser - Frontend Multi-Stage Dockerfile (Phase 1)
+# ==============================================================================
+
+# Stage 1: Build the React + Vite static bundle
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Install package dependencies
+COPY frontend/package*.json ./
+RUN npm ci
+
+# Copy frontend source files
+COPY frontend/ ./
+
+# Accept build arguments for API base URL if needed (default to relative for reverse-proxy)
+ARG VITE_API_BASE_URL=""
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+
+# Build production bundle into /app/dist
+RUN npm run build
+
+# Stage 2: Serve via Nginx with reverse proxy and SPA routing
+FROM nginx:alpine AS runner
+
+# Remove default nginx website
+RUN rm -rf /usr/share/nginx/html/*
+
+# Copy built frontend assets
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Copy custom nginx configuration
+COPY nginx/default.conf /etc/nginx/conf.d/default.conf
+
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]

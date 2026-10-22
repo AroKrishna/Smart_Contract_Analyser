@@ -1,0 +1,336 @@
+{
+  "model_name": "analysis/models/legal_bert_model",
+  "dataset_sha256": "0048f456c4ef0704962bd9b11ed2604d5f697a689f9bb2b8d1ffaa70f7725c28",
+  "seed": 42,
+  "split_counts": {
+    "train_total": 44,
+    "train_real": 24,
+    "train_synthetic": 20,
+    "validation_real": 7,
+    "validation_synthetic": 0,
+    "test_real": 7,
+    "test_synthetic": 0
+  },
+  "split_membership": {
+    "train_sample_ids": [
+      "CAN-015",
+      "CAN-016",
+      "CAN-019",
+      "CAN-020",
+      "CAN-022",
+      "CAN-023",
+      "CAN-024",
+      "CAN-025",
+      "CAN-034",
+      "CAN-035",
+      "CAN-036",
+      "CAN-037",
+      "CAN-038",
+      "CAN-039",
+      "CAN-040",
+      "CAN-041",
+      "CAN-042",
+      "CAN-043",
+      "CAN-044",
+      "CAN-048",
+      "CAN-049",
+      "CAN-050",
+      "CAN-051",
+      "CAN-052",
+      "SYN-001",
+      "SYN-002",
+      "SYN-003",
+      "SYN-004",
+      "SYN-005",
+      "SYN-006",
+      "SYN-007",
+      "SYN-008",
+      "SYN-009",
+      "SYN-010",
+      "SYN-011",
+      "SYN-012",
+      "SYN-013",
+      "SYN-014",
+      "SYN-015",
+      "SYN-016",
+      "SYN-017",
+      "SYN-018",
+      "SYN-019",
+      "SYN-020"
+    ],
+    "train_projects": [
+      "compound_protocol",
+      "crestal_network",
+      "ens_domains",
+      "linea_contracts",
+      "oif_broadcaster",
+      "openzeppelin_contracts",
+      "smart_contract_analyser_benchmark",
+      "synthetic_contact_book",
+      "synthetic_disclaimer_vault",
+      "synthetic_dynamic_tax",
+      "synthetic_experimental_staking",
+      "synthetic_fee_escalation",
+      "synthetic_kyc_registry",
+      "synthetic_liquidity_router",
+      "synthetic_nft_marketplace",
+      "synthetic_profile_directory",
+      "synthetic_student_registry",
+      "uniswap_v3_adapter",
+      "zk_token_distribution"
+    ],
+    "validation_sample_ids": [
+      "CAN-002",
+      "CAN-003",
+      "CAN-004",
+      "CAN-026",
+      "CAN-027",
+      "CAN-028",
+      "CAN-032"
+    ],
+    "validation_projects": [
+      "coinbase_base_bridge",
+      "spectral_image_vaults",
+      "the_compact",
+      "very_liquid_vaults"
+    ],
+    "test_sample_ids": [
+      "CAN-013",
+      "CAN-017",
+      "CAN-030",
+      "CAN-031",
+      "CAN-045",
+      "CAN-046",
+      "CAN-047"
+    ],
+    "test_projects": [
+      "anvil_protocol",
+      "aragon_vault",
+      "crytic_not_so_smart_contracts",
+      "virtuals_genesis"
+    ]
+  },
+  "thresholds": {
+    "Privacy": 0.5,
+    "Termination": 0.5,
+    "Legal Compliance": 0.5,
+    "Liability": 0.5,
+    "Payment / Financial": 0.5
+  },
+  "threshold_calibration_log": {
+    "Privacy": {
+      "threshold": 0.5,
+      "status": "default_uncalibrated",
+      "validation_positive_support": 0,
+      "reason": "Insufficient validation positive examples (0 < 2). Threshold calibration skipped to prevent artificial overfitting to an all-negative distribution."
+    },
+    "Termination": {
+      "threshold": 0.5,
+      "status": "default_uncalibrated",
+      "validation_positive_support": 0,
+      "reason": "Insufficient validation positive examples (0 < 2). Threshold calibration skipped to prevent artificial overfitting to an all-negative distribution."
+    },
+    "Legal Compliance": {
+      "threshold": 0.5,
+      "status": "default_uncalibrated",
+      "validation_positive_support": 0,
+      "reason": "Insufficient validation positive examples (0 < 2). Threshold calibration skipped to prevent artificial overfitting to an all-negative distribution."
+    },
+    "Liability": {
+      "threshold": 0.5,
+      "status": "default_uncalibrated",
+      "validation_positive_support": 0,
+      "reason": "Insufficient validation positive examples (0 < 2). Threshold calibration skipped to prevent artificial overfitting to an all-negative distribution."
+    },
+    "Payment / Financial": {
+      "threshold": 0.5,
+      "status": "default_uncalibrated",
+      "validation_positive_support": 0,
+      "reason": "Insufficient validation positive examples (0 < 2). Threshold calibration skipped to prevent artificial overfitting to an all-negative distribution."
+    }
+  },
+  "validation": {
+    "num_records": 7,
+    "macro_f1_all_categories": 0.0,
+    "macro_f1_evaluable_categories": 0.0,
+    "evaluable_categories": [],
+    "micro_f1": 0.0,
+    "hamming_loss": 0.0,
+    "categories": {
+      "Privacy": {
+        "threshold": 0.5,
+        "support_pos": 0,
+        "support_neg": 7,
+        "predicted_pos": 0,
+        "true_positives": 0,
+        "false_positives": 0,
+        "true_negatives": 7,
+        "false_negatives": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "support_status": "inconclusive_zero_positive_support",
+        "evaluation_note": "Evaluation inconclusive: split contains 0 true positive examples. Recall/F1 cannot be measured."
+      },
+      "Termination": {
+        "threshold": 0.5,
+        "support_pos": 0,
+        "support_neg": 7,
+        "predicted_pos": 0,
+        "true_positives": 0,
+        "false_positives": 0,
+        "true_negatives": 7,
+        "false_negatives": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "support_status": "inconclusive_zero_positive_support",
+        "evaluation_note": "Evaluation inconclusive: split contains 0 true positive examples. Recall/F1 cannot be measured."
+      },
+      "Legal Compliance": {
+        "threshold": 0.5,
+        "support_pos": 0,
+        "support_neg": 7,
+        "predicted_pos": 0,
+        "true_positives": 0,
+        "false_positives": 0,
+        "true_negatives": 7,
+        "false_negatives": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "support_status": "inconclusive_zero_positive_support",
+        "evaluation_note": "Evaluation inconclusive: split contains 0 true positive examples. Recall/F1 cannot be measured."
+      },
+      "Liability": {
+        "threshold": 0.5,
+        "support_pos": 0,
+        "support_neg": 7,
+        "predicted_pos": 0,
+        "true_positives": 0,
+        "false_positives": 0,
+        "true_negatives": 7,
+        "false_negatives": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "support_status": "inconclusive_zero_positive_support",
+        "evaluation_note": "Evaluation inconclusive: split contains 0 true positive examples. Recall/F1 cannot be measured."
+      },
+      "Payment / Financial": {
+        "threshold": 0.5,
+        "support_pos": 0,
+        "support_neg": 7,
+        "predicted_pos": 0,
+        "true_positives": 0,
+        "false_positives": 0,
+        "true_negatives": 7,
+        "false_negatives": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "support_status": "inconclusive_zero_positive_support",
+        "evaluation_note": "Evaluation inconclusive: split contains 0 true positive examples. Recall/F1 cannot be measured."
+      }
+    },
+    "calculation_notes": {
+      "macro_f1_all_categories": "Unweighted mean across all 5 categories; categories with 0 positive test examples contribute 0.0.",
+      "macro_f1_evaluable_categories": "Mean F1 computed only across categories with >= 1 positive test example ([]).",
+      "micro_f1": "Globally aggregated binary precision and recall across all label decisions."
+    }
+  },
+  "test": {
+    "num_records": 7,
+    "macro_f1_all_categories": 0.0,
+    "macro_f1_evaluable_categories": 0.0,
+    "evaluable_categories": [
+      "Termination",
+      "Legal Compliance"
+    ],
+    "micro_f1": 0.0,
+    "hamming_loss": 0.2,
+    "categories": {
+      "Privacy": {
+        "threshold": 0.5,
+        "support_pos": 0,
+        "support_neg": 7,
+        "predicted_pos": 0,
+        "true_positives": 0,
+        "false_positives": 0,
+        "true_negatives": 7,
+        "false_negatives": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "support_status": "inconclusive_zero_positive_support",
+        "evaluation_note": "Evaluation inconclusive: split contains 0 true positive examples. Recall/F1 cannot be measured."
+      },
+      "Termination": {
+        "threshold": 0.5,
+        "support_pos": 3,
+        "support_neg": 4,
+        "predicted_pos": 0,
+        "true_positives": 0,
+        "false_positives": 0,
+        "true_negatives": 4,
+        "false_negatives": 3,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "support_status": "sufficient_support",
+        "evaluation_note": "Evaluated on 3 true positive(s) and 4 true negative(s)."
+      },
+      "Legal Compliance": {
+        "threshold": 0.5,
+        "support_pos": 4,
+        "support_neg": 3,
+        "predicted_pos": 0,
+        "true_positives": 0,
+        "false_positives": 0,
+        "true_negatives": 3,
+        "false_negatives": 4,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "support_status": "sufficient_support",
+        "evaluation_note": "Evaluated on 4 true positive(s) and 3 true negative(s)."
+      },
+      "Liability": {
+        "threshold": 0.5,
+        "support_pos": 0,
+        "support_neg": 7,
+        "predicted_pos": 0,
+        "true_positives": 0,
+        "false_positives": 0,
+        "true_negatives": 7,
+        "false_negatives": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "support_status": "inconclusive_zero_positive_support",
+        "evaluation_note": "Evaluation inconclusive: split contains 0 true positive examples. Recall/F1 cannot be measured."
+      },
+      "Payment / Financial": {
+        "threshold": 0.5,
+        "support_pos": 0,
+        "support_neg": 7,
+        "predicted_pos": 0,
+        "true_positives": 0,
+        "false_positives": 0,
+        "true_negatives": 7,
+        "false_negatives": 0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "support_status": "inconclusive_zero_positive_support",
+        "evaluation_note": "Evaluation inconclusive: split contains 0 true positive examples. Recall/F1 cannot be measured."
+      }
+    },
+    "calculation_notes": {
+      "macro_f1_all_categories": "Unweighted mean across all 5 categories; categories with 0 positive test examples contribute 0.0.",
+      "macro_f1_evaluable_categories": "Mean F1 computed only across categories with >= 1 positive test example (['Termination', 'Legal Compliance']).",
+      "micro_f1": "Globally aggregated binary precision and recall across all label decisions."
+    }
+  },
+  "timestamp": "2026-10-21T19:46:58"
+}

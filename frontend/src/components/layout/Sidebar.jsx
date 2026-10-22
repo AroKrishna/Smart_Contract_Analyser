@@ -26,6 +26,7 @@ const Sidebar = ({ isOpen, onClose }) => {
   const secondaryNavigation = [
     { name: 'Profile', to: '/profile', icon: User },
     { name: 'Settings', to: '/settings', icon: Settings },
+    { name: 'Admin Panel', to: '/admin', icon: ShieldCheck },
   ];
 
   const handleSignOut = () => {
@@ -143,22 +144,13 @@ const Sidebar = ({ isOpen, onClose }) => {
           <div className="flex items-center justify-between p-2 rounded-lg bg-slate-900/40 border border-slate-800/60">
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-7 h-7 rounded-full bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-xs font-semibold text-blue-300 shrink-0">
-                JD
+                GA
               </div>
               <div className="min-w-0 flex-1">
-                <div className="text-xs font-medium text-slate-200 truncate">Jane Doe</div>
-                <div className="text-[10px] text-slate-400 truncate">Smart Contract Auditor</div>
+                <div className="text-xs font-medium text-slate-200 truncate">Guest Auditor</div>
+                <div className="text-[10px] text-emerald-400 font-mono truncate">Phase 1: No-Login Mode</div>
               </div>
             </div>
-
-            <button
-              type="button"
-              onClick={handleSignOut}
-              title="Sign Out"
-              className="p-1 text-slate-400 hover:text-red-400 transition-colors rounded"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
           </div>
         </div>
       </aside>

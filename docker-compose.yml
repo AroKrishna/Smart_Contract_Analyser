@@ -1,0 +1,49 @@
+# ==============================================================================
+# Smart Contract Analyser - Docker Compose (Phase 1 Ephemeral Architecture)
+# ==============================================================================
+# Architecture notes:
+# 1. Single backend container instance: ensures in-memory job store and results
+#    are not split across separate processes or replicas.
+# 2. Frontend served via Nginx reverse-proxy on port 80, routing /api/ and /ready
+#    directly to the backend container over internal Docker network.
+# 3. CPU and RAM resource limits specified to ensure smooth PyTorch + Legal-BERT
+#    and SHAP/LIME inference without thrashing.
+# ==============================================================================
+
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sca_backend
+    restart: unless-stopped
+    environment:
+      - ALLOWED_ORIGINS=http://localhost,http://localhost:80,http://127.0.0.1,http://127.0.0.1:80
+      - MAX_CONCURRENT_ANALYSIS_JOBS=2
+      - RATE_LIMIT_PER_MINUTE=10
+      - ANALYSIS_TTL_MINUTES=30
+      - MAX_STORED_ANALYSES=100
+    ports:
+      - "8000:8000"
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 3072M
+        reservations:
+          memory: 1536M
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      args:
+        - VITE_API_BASE_URL=
+    container_name: sca_frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend

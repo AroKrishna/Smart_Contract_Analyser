@@ -1,0 +1,30 @@
+# ==============================================================================
+# Smart Contract Analyser - Backend Dependencies (Phase 1)
+# ==============================================================================
+# Architecture requirement: Single backend instance, CPU-optimized inference.
+# Ensure pip uses CPU-only wheels for torch to keep container footprint lean.
+# ==============================================================================
+
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+# Web API Framework
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+pydantic>=2.0.0
+python-multipart>=0.0.9
+
+# Machine Learning & Explainability
+torch>=2.2.0
+transformers>=4.40.0
+shap>=0.45.0
+lime>=0.2.0.1
+scikit-learn>=1.4.0
+numpy>=1.26.0
+
+# Document & Report Generation
+reportlab>=4.0.0
+python-docx>=1.0.0
+
+# HTTP Client & Testing
+httpx>=0.27.0
+pytest>=8.0.0

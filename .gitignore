@@ -8,6 +8,31 @@ dist/
 dist-ssr/
 **/dist-ssr/
 
+# Python & Testing Cache
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+**/.pytest_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+ENV/
+
+# Large Model Checkpoints & Weights (>100MB, not tracked with Git LFS)
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.onnx
+
+# Local Database Files
+*.db
+*.sqlite
+*.sqlite3
+
 # Environment Variables & Local Secrets
 .env
 .env.local

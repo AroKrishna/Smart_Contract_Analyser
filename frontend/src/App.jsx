@@ -13,6 +13,7 @@ import History from './pages/History';
 import Reports from './pages/Reports';
 import Profile from './pages/Profile';
 import Settings from './pages/Settings';
+import Admin from './pages/Admin';
 
 function App() {
   return (
@@ -34,6 +35,7 @@ function App() {
           <Route path="/reports" element={<Reports />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/admin" element={<Admin />} />
         </Route>
 
         {/* Catch-all redirect */}
@@ -44,5 +46,3 @@ function App() {
 }
 
 export default App;
-
-

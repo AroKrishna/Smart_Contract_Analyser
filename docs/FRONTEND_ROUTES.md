@@ -1,4 +1,4 @@
-# XAI Contact Analyser Frontend Routes
+# Smart Contract Analyser Frontend Routes
 
 | Route | Page | Purpose |
 |---|---|---|

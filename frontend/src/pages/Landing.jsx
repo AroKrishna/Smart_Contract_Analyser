@@ -29,7 +29,7 @@ const Landing = () => {
           <div className="text-center max-w-3xl mx-auto mb-12">
             <div className="inline-flex items-center gap-2 mb-6">
               <Badge variant="info" size="md">
-                Explainable AI Research Framework
+                Phase 1 Open Access • No Account Required
               </Badge>
               <span className="text-xs text-slate-400 font-mono">Pre-Deployment Decision Support</span>
             </div>
@@ -40,21 +40,20 @@ const Landing = () => {
             </h1>
 
             <p className="mt-6 text-base sm:text-lg text-slate-400 leading-relaxed max-w-2xl mx-auto">
-              {APP_NAME} leverages Legal-BERT-based classification with SHAP and LIME
-              interpretability to detect potential legal, regulatory, and liability clauses before irreversible blockchain deployment.
+              {APP_NAME} leverages fine-tuned Legal-BERT multi-label classification paired with neural embedding gradient saliency to evaluate potential legal, termination, and financial operational hazards before irreversible blockchain deployment.
             </p>
 
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3.5">
               <Link to="/analysis/new" className="w-full sm:w-auto">
                 <Button variant="primary" size="lg" icon={FileCode} className="w-full sm:w-auto shadow-lg shadow-blue-600/20">
-                  New Contract Analysis
+                  Audit Smart Contract (No Login Required)
                 </Button>
               </Link>
-              <Link to="/dashboard" className="w-full sm:w-auto">
+              <a href="#pipeline" className="w-full sm:w-auto">
                 <Button variant="secondary" size="lg" icon={ArrowRight} iconPosition="right" className="w-full sm:w-auto">
-                  View Demo Dashboard
+                  How It Works
                 </Button>
-              </Link>
+              </a>
             </div>
           </div>
 
