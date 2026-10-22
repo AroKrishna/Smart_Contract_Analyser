@@ -1,63 +1,148 @@
 /**
  * frontend/src/services/api.js
- * Real API client connecting the React frontend to the FastAPI backend service.
+ * Production API client connecting the React frontend to the FastAPI backend service.
+ * Supports configurable VITE_API_BASE_URL, unified request dispatching, and safe diagnostic error handling.
  */
 
 const isDev = Boolean(import.meta.env.DEV);
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '');
-const DIRECT_BACKEND_URL = isDev ? 'http://127.0.0.1:8000' : '';
 
-// In-memory session cache for fast tab-switching
+/**
+ * Resolves the active backend API base URL:
+ * 1. Explicit VITE_API_BASE_URL environment variable if configured.
+ * 2. In local development (npm run dev), defaults to http://127.0.0.1:8000.
+ * 3. In production without VITE_API_BASE_URL, returns empty string (relative requests).
+ */
+export function getApiBaseUrl() {
+  const envUrl = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/+$/, '');
+  if (envUrl) {
+    return envUrl;
+  }
+  if (isDev) {
+    return 'http://127.0.0.1:8000';
+  }
+  return '';
+}
+
+// In-memory session cache for fast tab-switching and ephemeral client retention
 const memoryCache = new Map();
 
 /**
- * Helper to execute HTTP requests with automatic fallback to direct backend URL in local development mode.
+ * Unified HTTP request helper with robust error translation and zero secret/path leakage.
  */
-async function fetchWithFallback(endpoint, options = {}) {
+async function request(endpoint, options = {}) {
+  const baseUrl = getApiBaseUrl();
+  const url = baseUrl ? `${baseUrl}${endpoint}` : endpoint;
+  const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
+
   const headers = {
-    'Content-Type': 'application/json',
+    ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
     ...(options.headers || {}),
   };
 
-  const primaryUrl = `${API_BASE_URL}${endpoint}`;
+  let response;
   try {
-    const response = await fetch(primaryUrl, { credentials: 'omit', ...options, headers });
-    return response;
-  } catch (primaryErr) {
-    if (isDev && !API_BASE_URL && DIRECT_BACKEND_URL) {
-      const fallbackUrl = `${DIRECT_BACKEND_URL}${endpoint}`;
-      try {
-        const fallbackResponse = await fetch(fallbackUrl, { ...options, headers });
-        return fallbackResponse;
-      } catch (fallbackErr) {
-        throw new Error(
-          `Unable to connect to the analysis service at ${DIRECT_BACKEND_URL}. ` +
-          `Please ensure the FastAPI backend is running via: uvicorn analysis.api:app --reload --port 8000`,
-          { cause: fallbackErr }
-        );
-      }
-    }
+    response = await fetch(url, {
+      credentials: 'omit',
+      ...options,
+      headers,
+    });
+  } catch (netErr) {
+    const hostLabel = baseUrl || (typeof window !== 'undefined' ? window.location.origin : 'backend');
     throw new Error(
-      'Unable to connect to the Smart Contract Analyser backend service. Please check your network connection or verify service status.',
-      { cause: primaryErr }
+      `Unable to reach the Smart Contract Analyser backend at ${hostLabel}. ` +
+      `Please ensure the FastAPI backend is running and that CORS allows requests from this domain.`,
+      { cause: netErr }
     );
   }
+
+  const contentType = response.headers.get('content-type') || '';
+  const isHtml = contentType.includes('text/html');
+
+  // Vercel static router returns HTTP 405 Method Not Allowed when receiving POST on routes without serverless functions
+  if (response.status === 405) {
+    throw new Error(
+      `Backend service is not connected (HTTP 405 on ${endpoint}). ` +
+      `The frontend is hosted on Vercel, which requires VITE_API_BASE_URL to be set in your Vercel project environment variables ` +
+      `to point to your deployed FastAPI backend container.`
+    );
+  }
+
+  if (isHtml && !response.ok) {
+    throw new Error(
+      `Analysis service returned an unexpected response (status ${response.status}). ` +
+      `Please check backend availability and verify that VITE_API_BASE_URL points to the FastAPI service.`
+    );
+  }
+
+  let data = null;
+  if (!isHtml) {
+    data = await response.json().catch(() => null);
+  }
+
+  if (!response.ok) {
+    let errorMessage = `Analysis service error (${response.status})`;
+
+    if (data?.detail) {
+      errorMessage = typeof data.detail === 'object'
+        ? (data.detail.message || JSON.stringify(data.detail))
+        : data.detail;
+    } else if (data?.reason) {
+      errorMessage = data.reason;
+    } else if (response.status === 503) {
+      errorMessage = 'Legal-BERT analysis engine is unavailable. Model weights (legal_bert_v3.3.0) are not initialized on the backend.';
+    } else if (response.status === 429) {
+      errorMessage = 'Rate limit exceeded (maximum 10 submissions per minute). Please wait 60 seconds before submitting again.';
+    } else if (response.status === 413) {
+      errorMessage = 'Source code exceeds maximum permitted payload size of 2MB.';
+    } else if (response.status === 400) {
+      errorMessage = 'Invalid or empty Solidity smart contract submitted.';
+    } else if (response.status === 422) {
+      errorMessage = 'Unsupported or non-Solidity source submitted. Please verify contract syntax.';
+    } else if (response.status === 404) {
+      errorMessage = `The requested analysis resource was not found (${endpoint}). It may have expired under the 30-minute in-memory retention policy.`;
+    } else if (response.status >= 500) {
+      errorMessage = 'An internal server error occurred on the backend during analysis processing.';
+    }
+
+    const error = new Error(errorMessage);
+    error.status = response.status;
+    error.detail = data?.detail;
+    error.code = data?.detail?.code || (data?.status === 'not_ready' ? 'MODEL_UNAVAILABLE' : undefined);
+    throw error;
+  }
+
+  return data;
 }
 
 export const api = {
   /**
-   * Health check endpoint
+   * Returns current active base URL
+   */
+  getBaseUrl() {
+    return getApiBaseUrl();
+  },
+
+  /**
+   * Health check endpoint confirming engine readiness and storage policy
    */
   async checkHealth() {
     try {
-      const res = await fetchWithFallback('/api/v1/health');
-      if (!res.ok) {
-        throw new Error(`Health check returned status ${res.status}`);
-      }
-      return await res.json();
+      const data = await request('/api/v1/health');
+      return data || { status: 'offline' };
     } catch (err) {
-      console.warn('Backend health check failed:', err.message);
       return { status: 'offline', error: err.message };
+    }
+  },
+
+  /**
+   * Model readiness probe checking if legal_bert_v3.3.0 checkpoint is initialized
+   */
+  async checkReadiness() {
+    try {
+      const data = await request('/ready');
+      return data || { status: 'not_ready' };
+    } catch (err) {
+      return { status: 'not_ready', error: err.message };
     }
   },
 
@@ -65,7 +150,7 @@ export const api = {
    * Phase 1: Initiate asynchronous Legal-BERT analysis job with real progress tracking
    */
   async startAnalysisJob(sourceCode, contractName = 'Contract.sol', description = '') {
-    const response = await fetchWithFallback('/api/v1/analyze/jobs', {
+    return await request('/api/v1/analyze/jobs', {
       method: 'POST',
       body: JSON.stringify({
         sourceCode,
@@ -73,27 +158,6 @@ export const api = {
         description,
       }),
     });
-
-    const data = await response.json().catch(() => null);
-
-    if (!response.ok) {
-      let errorMessage = 'Failed to initiate analysis job.';
-      if (data?.detail) {
-        errorMessage = typeof data.detail === 'object' ? (data.detail.message || JSON.stringify(data.detail)) : data.detail;
-      } else if (response.status === 413) {
-        errorMessage = 'Source code exceeds maximum permitted payload size of 2MB.';
-      } else if (response.status === 400) {
-        errorMessage = 'Invalid or empty Solidity source submitted.';
-      } else if (response.status === 422) {
-        errorMessage = 'Unsupported or non-Solidity source submitted.';
-      }
-      const error = new Error(errorMessage);
-      error.status = response.status;
-      error.detail = data?.detail;
-      throw error;
-    }
-
-    return data;
   },
 
   /**
@@ -105,42 +169,17 @@ export const api = {
     if (contractName) formData.append('contract_name', contractName);
     if (description) formData.append('description', description);
 
-    const primaryUrl = `${API_BASE_URL || DIRECT_BACKEND_URL}/api/v1/analyze/upload`;
-    const response = await fetch(primaryUrl, {
+    return await request('/api/v1/analyze/upload', {
       method: 'POST',
       body: formData,
     });
-
-    const data = await response.json().catch(() => null);
-
-    if (!response.ok) {
-      let errorMessage = 'File upload failed.';
-      if (data?.detail) {
-        errorMessage = typeof data.detail === 'object' ? (data.detail.message || JSON.stringify(data.detail)) : data.detail;
-      } else if (response.status === 413) {
-        errorMessage = 'Uploaded file exceeds 2MB limit.';
-      } else if (response.status === 400) {
-        errorMessage = 'Invalid file type. Only Solidity .sol files are supported.';
-      }
-      const error = new Error(errorMessage);
-      error.status = response.status;
-      error.detail = data?.detail;
-      throw error;
-    }
-
-    return data;
   },
 
   /**
    * Phase 1: Poll real analysis job status and progress
    */
   async getJobStatus(jobId) {
-    const response = await fetchWithFallback(`/api/v1/jobs/${jobId}`);
-    if (!response.ok) {
-      const data = await response.json().catch(() => null);
-      throw new Error(data?.detail?.message || `Job status check failed (${response.status})`);
-    }
-    const data = await response.json();
+    const data = await request(`/api/v1/jobs/${jobId}`);
     if (data?.result?.analysisId) {
       memoryCache.set(data.result.analysisId, data.result);
       try {
@@ -166,7 +205,7 @@ export const api = {
     }
 
     try {
-      await fetchWithFallback(`/api/v1/analyze/${analysisId}/discard`, {
+      await request(`/api/v1/analyze/${analysisId}/discard`, {
         method: 'POST',
       });
     } catch (err) {
@@ -179,7 +218,7 @@ export const api = {
    * Submit Solidity source code for synchronous Legal-BERT analysis
    */
   async analyzeContract(sourceCode, contractName = 'Contract.sol', description = '') {
-    const response = await fetchWithFallback('/api/v1/analyze', {
+    const data = await request('/api/v1/analyze', {
       method: 'POST',
       body: JSON.stringify({
         sourceCode,
@@ -187,32 +226,6 @@ export const api = {
         description,
       }),
     });
-
-    const data = await response.json().catch(() => null);
-
-    if (!response.ok) {
-      let errorMessage = 'Analysis failed.';
-      if (data?.detail) {
-        if (typeof data.detail === 'object') {
-          errorMessage = data.detail.message || JSON.stringify(data.detail);
-        } else {
-          errorMessage = data.detail;
-        }
-      } else if (response.status === 413) {
-        errorMessage = 'Source code exceeds maximum permitted payload size of 2MB.';
-      } else if (response.status === 400) {
-        errorMessage = 'Invalid or empty Solidity source submitted.';
-      } else if (response.status === 422) {
-        errorMessage = 'Unsupported or non-Solidity source submitted.';
-      } else if (response.status >= 500) {
-        errorMessage = 'Backend analysis service is currently unavailable. Please ensure FastAPI is running on port 8000.';
-      }
-
-      const error = new Error(errorMessage);
-      error.status = response.status;
-      error.detail = data?.detail;
-      throw error;
-    }
 
     if (data?.analysisId) {
       memoryCache.set(data.analysisId, data);
@@ -245,16 +258,15 @@ export const api = {
       console.warn('Session storage read failed:', e);
     }
 
-    const response = await fetchWithFallback(`/api/v1/analyze/${analysisId}`);
-    if (!response.ok) {
+    try {
+      const data = await request(`/api/v1/analyze/${analysisId}`);
+      if (data?.analysisId) {
+        memoryCache.set(data.analysisId, data);
+      }
+      return data;
+    } catch {
       return null;
     }
-
-    const data = await response.json();
-    if (data?.analysisId) {
-      memoryCache.set(data.analysisId, data);
-    }
-    return data;
   },
 
   /**
@@ -265,27 +277,17 @@ export const api = {
     if (query) params.append('query', query);
     if (riskLevel && riskLevel !== 'All') params.append('risk_level', riskLevel);
 
-    const response = await fetchWithFallback(`/api/v1/analyses?${params.toString()}`);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch history (status ${response.status})`);
-    }
-    return await response.json();
+    return await request(`/api/v1/analyses?${params.toString()}`);
   },
 
   /**
    * Phase 6: Interactive Context-Scoped AI Legal Assistant query
    */
   async chatWithAssistant(analysisId, message) {
-    const response = await fetchWithFallback(`/api/v1/analyze/${analysisId}/chat`, {
+    return await request(`/api/v1/analyze/${analysisId}/chat`, {
       method: 'POST',
       body: JSON.stringify({ message }),
     });
-
-    if (!response.ok) {
-      const err = await response.json().catch(() => null);
-      throw new Error(err?.detail?.message || 'Chat assistant query failed.');
-    }
-    return await response.json();
   },
 
   /**
@@ -294,12 +296,18 @@ export const api = {
   async downloadReport(analysisId, format = 'PDF', contractName = 'Contract') {
     const ext = format.toLowerCase() === 'docx' ? 'docx' : 'pdf';
     const endpoint = `/api/v1/reports/${analysisId}/${ext}`;
+    const baseUrl = getApiBaseUrl();
+    const url = baseUrl ? `${baseUrl}${endpoint}` : endpoint;
 
-    const baseUrl = API_BASE_URL || (isDev ? DIRECT_BACKEND_URL : '');
-    const url = `${baseUrl}${endpoint}`;
-    const response = await fetch(url);
+    let response;
+    try {
+      response = await fetch(url, { credentials: 'omit' });
+    } catch (err) {
+      throw new Error(`Unable to reach the report download service. Please verify backend connectivity.`);
+    }
+
     if (!response.ok) {
-      throw new Error(`Report export failed with status ${response.status}`);
+      throw new Error(`Report export failed with status ${response.status}. The analysis may have expired.`);
     }
 
     const blob = await response.blob();
@@ -317,54 +325,40 @@ export const api = {
    * Phase 13: Admin Control Panel endpoints
    */
   async getAdminStats() {
-    const res = await fetchWithFallback('/api/v1/admin/stats');
-    if (!res.ok) throw new Error('Failed to load admin stats');
-    return await res.json();
+    return await request('/api/v1/admin/stats');
   },
 
   async getAdminUsers() {
-    const res = await fetchWithFallback('/api/v1/admin/users');
-    if (!res.ok) throw new Error('Failed to load admin users');
-    return await res.json();
+    return await request('/api/v1/admin/users');
   },
 
   async getAdminModelStatus() {
-    const res = await fetchWithFallback('/api/v1/admin/model-status');
-    if (!res.ok) throw new Error('Failed to load model status');
-    return await res.json();
+    return await request('/api/v1/admin/model-status');
   },
 
   /**
    * Phase 1 & 11: Auth methods
    */
   async login(email, password) {
-    const res = await fetchWithFallback('/api/v1/auth/login', {
+    return await request('/api/v1/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
-    if (!res.ok) {
-      const data = await res.json().catch(() => null);
-      throw new Error(data?.detail?.message || 'Invalid credentials');
-    }
-    return await res.json();
   },
 
   async register(email, password, fullName, organization) {
-    const res = await fetchWithFallback('/api/v1/auth/register', {
+    return await request('/api/v1/auth/register', {
       method: 'POST',
       body: JSON.stringify({ email, password, fullName, organization }),
     });
-    if (!res.ok) {
-      const data = await res.json().catch(() => null);
-      throw new Error(data?.detail?.message || 'Registration failed');
-    }
-    return await res.json();
   },
 
   async getCurrentUser() {
-    const res = await fetchWithFallback('/api/v1/auth/me');
-    if (!res.ok) return null;
-    return await res.json();
+    try {
+      return await request('/api/v1/auth/me');
+    } catch {
+      return null;
+    }
   },
 
   /**

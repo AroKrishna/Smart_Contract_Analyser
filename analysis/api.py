@@ -86,30 +86,43 @@ app = FastAPI(
 db.init_db()
 
 # CORS configuration: configurable via ALLOWED_ORIGINS env var for production
-allowed_origins_raw = os.environ.get("ALLOWED_ORIGINS", "")
-if allowed_origins_raw.strip():
-    cors_origins = [orig.strip() for orig in allowed_origins_raw.split(",") if orig.strip()]
+allowed_origins_raw = os.environ.get("ALLOWED_ORIGINS", "").strip()
+
+default_origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:5174",
+    "http://127.0.0.1:5174",
+    "http://localhost:4173",
+    "http://127.0.0.1:4173",
+    "https://xai-contract-analyser.vercel.app",
+    "https://smart-contract-analyser.vercel.app",
+]
+
+# Allow any localhost or Vercel preview/production deployments by default
+allow_origin_regex = r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$|^https://[a-zA-Z0-9_-]+\.vercel\.app$"
+allow_credentials = True
+
+if allowed_origins_raw == "*":
+    cors_origins = ["*"]
     allow_origin_regex = None
+    allow_credentials = False
+elif allowed_origins_raw:
+    configured = [orig.strip() for orig in allowed_origins_raw.split(",") if orig.strip()]
+    cors_origins = list(dict.fromkeys(default_origins + configured))
 else:
-    cors_origins = [
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:5174",
-        "http://127.0.0.1:5174",
-        "http://localhost:4173",
-        "http://127.0.0.1:4173",
-    ]
-    allow_origin_regex = r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$"
+    cors_origins = default_origins
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
     allow_origin_regex=allow_origin_regex,
-    allow_credentials=True,
+    allow_credentials=allow_credentials,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["x-analysis-disclaimer", "x-engine-type", "x-persistence-note"],
 )
 
 
@@ -240,7 +253,7 @@ def health_check():
         "persistenceNote": "Ephemeral in-memory cache; results do not survive server restarts.",
         "modelAvailable": is_model_ready,
         "checkpointName": engine.checkpoint_name,
-        "checkpointPath": engine.model_dir,
+        "checkpointPath": f"analysis/models/{engine.checkpoint_name}",
         "checkpointVersion": "v3.3.0",
         "modelStatus": "deployed" if is_model_ready else "training_blocked_by_data_limitations",
         "disclaimer": "Automated pre-deployment decision support. Findings are operational risk indicators, not authoritative legal advice.",

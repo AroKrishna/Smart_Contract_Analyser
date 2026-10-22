@@ -886,7 +886,7 @@ class AnalysisEngine:
         model_disclosures = {
             "modelName": f"nlpaueb/legal-bert-base-uncased ({self.checkpoint_name})",
             "checkpointName": self.checkpoint_name,
-            "checkpointPath": self.model_dir,
+            "checkpointPath": f"analysis/models/{self.checkpoint_name}",
             "datasetVersion": "v3.3.0",
             "datasetSha256": "74464fd132e9268220549adc8e5cfb31d4ca69b9fae203b31ae2924c1500e456",
             "isCalibrated": False,
@@ -964,7 +964,7 @@ class AnalysisEngine:
                 "analysisModelVersion": self.VERSION,
                 "engineType": self.ENGINE_TYPE,
                 "checkpointName": self.checkpoint_name,
-                "checkpointPath": self.model_dir,
+                "checkpointPath": f"analysis/models/{self.checkpoint_name}",
                 "datasetVersion": "v3.3.0",
                 "datasetSha256": "74464fd132e9268220549adc8e5cfb31d4ca69b9fae203b31ae2924c1500e456",
                 "ruleEngineSubstituteUsed": False,

@@ -29,16 +29,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application source code and frozen model artifacts
+# Copy application source code, entrypoint, and data assets
 COPY analysis/ ./analysis/
 COPY data/ ./data/
+COPY docker-entrypoint.sh ./docker-entrypoint.sh
+RUN chmod +x ./docker-entrypoint.sh
 
-# Health check using the backend /ready endpoint
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:8000/ready || exit 1
+# Health check using the backend /health endpoint (ready checks model status specifically)
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
 
 # Expose backend port
 EXPOSE 8000
 
-# Launch Uvicorn with a single worker to guarantee shared in-memory job state
-CMD ["uvicorn", "analysis.api:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
+# Execute entrypoint with Uvicorn single worker process
+ENTRYPOINT ["/app/docker-entrypoint.sh"]

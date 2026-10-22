@@ -114,18 +114,33 @@ const NewAnalysis = () => {
   const [realStageName, setRealStageName] = useState('Validating');
   const [isDragging, setIsDragging] = useState(false);
 
-  // Check backend service status on mount
+  // Check backend service status and model readiness on mount
   useEffect(() => {
     let isMounted = true;
-    api.checkHealth()
-      .then((res) => {
-        if (isMounted) {
-          setBackendStatus(res.status === 'healthy' ? 'online' : 'offline');
+    async function evaluateServiceStatus() {
+      try {
+        const healthRes = await api.checkHealth();
+        if (!isMounted) return;
+
+        if (healthRes.status === 'healthy') {
+          const readyRes = await api.checkReadiness();
+          if (!isMounted) return;
+          if (readyRes.status === 'ready') {
+            setBackendStatus('online');
+          } else {
+            setBackendStatus('model_unavailable');
+          }
+        } else if (healthRes.status === 'degraded') {
+          setBackendStatus('model_unavailable');
+        } else {
+          setBackendStatus('offline');
         }
-      })
-      .catch(() => {
+      } catch {
         if (isMounted) setBackendStatus('offline');
-      });
+      }
+    }
+
+    evaluateServiceStatus();
 
     return () => {
       isMounted = false;
@@ -223,6 +238,26 @@ const NewAnalysis = () => {
       return;
     }
 
+    // Pre-flight check: ensure backend is reachable before initiating job
+    if (backendStatus === 'offline') {
+      const activeUrl = api.getBaseUrl();
+      const targetLabel = activeUrl ? `at ${activeUrl}` : 'on this domain';
+      setErrorMessage(
+        `Cannot initiate analysis: Backend service is currently unreachable ${targetLabel}. ` +
+        `If running locally, please start the backend service on port 8000. ` +
+        `If using the deployed website, configure VITE_API_BASE_URL in your hosting provider's settings pointing to the running backend container.`
+      );
+      return;
+    }
+
+    if (backendStatus === 'model_unavailable') {
+      setErrorMessage(
+        'Cannot initiate analysis: Legal-BERT model weights (legal_bert_v3.3.0) are unavailable on the backend. ' +
+        'Please ensure the model checkpoint is placed in analysis/models/legal_bert_v3.3.0/.'
+      );
+      return;
+    }
+
     // Begin live asynchronous pipeline processing
     setIsAnalyzing(true);
     setCurrentStepIndex(0);
@@ -313,10 +348,15 @@ const NewAnalysis = () => {
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                 Legal-BERT Engine Online
               </span>
-            ) : backendStatus === 'offline' ? (
+            ) : backendStatus === 'model_unavailable' ? (
               <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[11px] font-mono">
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                Backend Standby (Port 8000)
+                Model Checkpoint Missing (503)
+              </span>
+            ) : backendStatus === 'offline' ? (
+              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400 text-[11px] font-mono">
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
+                Backend Disconnected
               </span>
             ) : (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 text-[11px] font-mono">
@@ -360,6 +400,17 @@ const NewAnalysis = () => {
           Uploaded contracts and generated reports are held strictly in temporary memory (30-minute retention) and are never permanently stored.
         </div>
       </div>
+
+      {/* Backend Disconnected Notice */}
+      {backendStatus === 'offline' && !errorMessage && (
+        <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-300 flex items-start gap-2.5">
+          <AlertCircle className="w-4 h-4 shrink-0 text-amber-400 mt-0.5" />
+          <div className="leading-relaxed">
+            <span className="font-semibold text-amber-200">Backend service not connected: </span>
+            Start your FastAPI service locally (<code className="px-1 py-0.5 bg-amber-950/60 rounded font-mono text-amber-200">uvicorn analysis.api:app --port 8000</code>), or set <code className="px-1 py-0.5 bg-amber-950/60 rounded font-mono text-amber-200">VITE_API_BASE_URL</code> in your cloud host settings to connect to your deployed FastAPI backend container.
+          </div>
+        </div>
+      )}
 
       {/* Error Alert Bar */}
       {errorMessage && (
