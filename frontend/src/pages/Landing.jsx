@@ -29,7 +29,7 @@ const Landing = () => {
           <div className="text-center max-w-3xl mx-auto mb-12">
             <div className="inline-flex items-center gap-2 mb-6">
               <Badge variant="info" size="md">
-                Phase 1 Open Access • No Account Required
+                Enterprise AI SaaS Platform • Legal-BERT Powered
               </Badge>
               <span className="text-xs text-slate-400 font-mono">Pre-Deployment Decision Support</span>
             </div>
@@ -46,7 +46,7 @@ const Landing = () => {
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3.5">
               <Link to="/analysis/new" className="w-full sm:w-auto">
                 <Button variant="primary" size="lg" icon={FileCode} className="w-full sm:w-auto shadow-lg shadow-blue-600/20">
-                  Audit Smart Contract (No Login Required)
+                  Audit Smart Contract
                 </Button>
               </Link>
               <a href="#pipeline" className="w-full sm:w-auto">

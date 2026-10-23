@@ -8,6 +8,7 @@ import {
   ShieldCheck,
   Calendar,
   Database,
+  Trash2,
 } from 'lucide-react';
 import Card from '../components/common/Card';
 import Badge from '../components/common/Badge';
@@ -15,13 +16,16 @@ import Input from '../components/common/Input';
 import Button from '../components/common/Button';
 import EmptyState from '../components/common/EmptyState';
 import { mockContracts } from '../data/mockData';
+import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 
 const History = () => {
+  const { user, isAuthenticated } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRiskLevel, setSelectedRiskLevel] = useState('All');
   const [liveAudits, setLiveAudits] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
 
   const riskLevels = ['All', 'Low', 'Medium', 'High', 'Critical'];
 
@@ -29,10 +33,15 @@ const History = () => {
     let isCancelled = false;
 
     async function loadHistory() {
+      if (!isAuthenticated) {
+        setLiveAudits([]);
+        return;
+      }
+
       setLoading(true);
       try {
         const data = await api.listHistory(searchQuery, selectedRiskLevel);
-        if (!isCancelled && data?.analyses && data.analyses.length > 0) {
+        if (!isCancelled && data?.analyses) {
           setLiveAudits(data.analyses);
         } else if (!isCancelled) {
           setLiveAudits([]);
@@ -49,10 +58,27 @@ const History = () => {
     return () => {
       isCancelled = true;
     };
-  }, [searchQuery, selectedRiskLevel]);
+  }, [searchQuery, selectedRiskLevel, isAuthenticated]);
 
-  // Combined contracts: DB records prioritized, supplemented with demo mockContracts
-  const displayContracts = liveAudits.length > 0
+  const handleDelete = async (auditId, e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!window.confirm(`Are you sure you want to permanently delete audit '${auditId}'?`)) {
+      return;
+    }
+    setDeletingId(auditId);
+    try {
+      await api.deleteAnalysis(auditId);
+      setLiveAudits((prev) => prev.filter((a) => (a.id || a.analysisId) !== auditId));
+    } catch (err) {
+      alert(`Delete failed: ${err.message}`);
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  // For authenticated users, display strictly their persistent audits from the backend
+  const displayContracts = isAuthenticated
     ? liveAudits
     : mockContracts.filter((contract) => {
         const matchesSearch =
@@ -201,13 +227,26 @@ const History = () => {
                     </td>
 
                     <td className="py-3.5 px-4 text-right">
-                      <Link
-                        to={`/analysis/${auditId}`}
-                        className="inline-flex items-center gap-1 text-blue-400 hover:text-blue-300 font-semibold group-hover:translate-x-0.5 transition-transform"
-                      >
-                        <span>View</span>
-                        <ArrowUpRight className="w-3.5 h-3.5" />
-                      </Link>
+                      <div className="inline-flex items-center gap-3">
+                        <Link
+                          to={`/analysis/${auditId}`}
+                          className="inline-flex items-center gap-1 text-blue-400 hover:text-blue-300 font-semibold group-hover:translate-x-0.5 transition-transform"
+                        >
+                          <span>View</span>
+                          <ArrowUpRight className="w-3.5 h-3.5" />
+                        </Link>
+                        {isAuthenticated && (
+                          <button
+                            type="button"
+                            onClick={(e) => handleDelete(auditId, e)}
+                            disabled={deletingId === auditId}
+                            title="Delete audit"
+                            className="text-slate-500 hover:text-red-400 p-1 rounded hover:bg-slate-800 transition-colors disabled:opacity-50"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );

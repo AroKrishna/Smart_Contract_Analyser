@@ -21,6 +21,10 @@ client = TestClient(app)
 @pytest.fixture(autouse=True)
 def seed_test_audit():
     db.init_db()
+    login_res = client.post("/api/v1/auth/login", json={"email": "admin@legal-ai.io", "password": "AdminPass2026!"})
+    if login_res.status_code == 200:
+        token = login_res.json().get("accessToken") or login_res.json().get("token")
+        client.headers["Authorization"] = f"Bearer {token}"
     test_record = {
         "analysisId": "audit-101",
         "contractName": "VulnerableEscrow.sol",
@@ -186,8 +190,43 @@ def test_get_analysis_by_id_seeded():
 
 
 def test_list_analyses_history():
-    """Verify GET /api/v1/analyses retrieves persistent history with filters."""
-    response = client.get("/api/v1/analyses?risk_level=All")
+    """Verify GET /api/v1/analyses requires authentication and retrieves user-owned history with filters."""
+    # 1. Unauthenticated request must return 401 Unauthorized
+    unauth_response = TestClient(app).get("/api/v1/analyses?risk_level=All")
+    assert unauth_response.status_code == 401
+
+    # 2. Login as admin user
+    login_payload = {
+        "email": "admin@legal-ai.io",
+        "password": "AdminPass2026!"
+    }
+    auth_res = client.post("/api/v1/auth/login", json=login_payload)
+    assert auth_res.status_code == 200
+    token = auth_res.json()["token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # 3. Insert an audit owned by usr-admin-01
+    sample_analysis = {
+        "analysisId": "audit-user-hist",
+        "contractName": "HistoryContract.sol",
+        "contractType": "Solidity Smart Contract",
+        "solidityCode": SAMPLE_VALID_CONTRACT,
+        "status": "completed",
+        "riskScore": 75,
+        "riskLevel": "High",
+        "riskBreakdown": {},
+        "categories": [],
+        "findings": [],
+        "shapValues": [],
+        "limeExplanations": [],
+        "recommendations": [],
+        "complianceMatrix": [],
+        "summary": "History test contract"
+    }
+    db.insert_analysis(sample_analysis, user_id="usr-admin-01")
+
+    # 4. Authenticated request retrieves owned analyses
+    response = client.get("/api/v1/analyses?risk_level=All", headers=headers)
     assert response.status_code == 200
     data = response.json()
     assert "total" in data
@@ -241,13 +280,22 @@ def test_auth_login_and_profile():
 
 def test_admin_endpoints():
     """Verify Admin metrics, user list, and model status."""
-    stats_res = client.get("/api/v1/admin/stats")
+    login_payload = {
+        "email": "admin@legal-ai.io",
+        "password": "AdminPass2026!"
+    }
+    auth_res = client.post("/api/v1/auth/login", json=login_payload)
+    assert auth_res.status_code == 200
+    token = auth_res.json()["token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    stats_res = client.get("/api/v1/admin/stats", headers=headers)
     assert stats_res.status_code == 200
     stats = stats_res.json()
     assert "totalUsers" in stats
     assert "totalAnalyses" in stats
 
-    model_res = client.get("/api/v1/admin/model-status")
+    model_res = client.get("/api/v1/admin/model-status", headers=headers)
     assert model_res.status_code == 200
     m_data = model_res.json()
     assert "modelName" in m_data
@@ -377,5 +425,30 @@ def test_cors_headers():
     )
     assert response.status_code == 200
     assert response.headers.get("access-control-allow-origin") == "http://localhost:5173"
+
+
+def test_unauthenticated_analysis_submissions_rejected():
+    """Verify POST /api/v1/analyze, /upload, and /jobs return 401 when unauthenticated."""
+    anon_client = TestClient(app)
+    # 1. Direct Analysis
+    r1 = anon_client.post("/api/v1/analyze", json={"sourceCode": SAMPLE_VALID_CONTRACT})
+    assert r1.status_code == 401
+    assert r1.json()["detail"]["code"] == "AUTHENTICATION_REQUIRED"
+
+    # 2. File Upload
+    r2 = anon_client.post("/api/v1/analyze/upload", files={"file": ("Contract.sol", b"contract C {}", "text/plain")})
+    assert r2.status_code == 401
+    assert r2.json()["detail"]["code"] == "AUTHENTICATION_REQUIRED"
+
+    # 3. Async Job Creation
+    r3 = anon_client.post("/api/v1/analyze/jobs", json={"sourceCode": SAMPLE_VALID_CONTRACT})
+    assert r3.status_code == 401
+    assert r3.json()["detail"]["code"] == "AUTHENTICATION_REQUIRED"
+
+    # 4. Job Status Retrieval
+    r4 = anon_client.get("/api/v1/jobs/job-fake123")
+    assert r4.status_code == 401
+    assert r4.json()["detail"]["code"] == "AUTHENTICATION_REQUIRED"
+
 
 

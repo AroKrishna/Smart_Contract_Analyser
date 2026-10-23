@@ -8,6 +8,7 @@ const AnalysisProgress = ({
   progressPercent: explicitProgress,
   stageMessage = '',
   stageName = '',
+  onCancel = null,
 }) => {
   const progressPercent = typeof explicitProgress === 'number'
     ? explicitProgress
@@ -113,8 +114,21 @@ const AnalysisProgress = ({
           })}
         </div>
 
+        {/* Cancellation Option */}
+        {onCancel && (
+          <div className="mt-6 flex justify-center">
+            <button
+              type="button"
+              onClick={onCancel}
+              className="text-xs px-3.5 py-1.5 rounded-lg border border-red-500/30 bg-red-950/30 text-red-300 hover:bg-red-900/40 hover:border-red-500/50 transition-colors"
+            >
+              Cancel Analysis Job
+            </button>
+          </div>
+        )}
+
         {/* Prototype Disclaimer */}
-        <div className="mt-6 pt-4 border-t border-slate-800 text-center">
+        <div className="mt-4 pt-4 border-t border-slate-800 text-center">
           <p className="text-[11px] text-slate-500 flex items-center justify-center gap-1.5">
             <ShieldCheck className="w-3.5 h-3.5 text-slate-400" />
             Decision-support preview: UI representation of the planned AI analysis stages.

@@ -17,7 +17,7 @@ export function getApiBaseUrl() {
   if (envUrl) {
     return envUrl;
   }
-  if (isDev) {
+  if (isDev || (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))) {
     return 'http://127.0.0.1:8000';
   }
   return '';
@@ -28,6 +28,7 @@ const memoryCache = new Map();
 
 /**
  * Unified HTTP request helper with robust error translation and zero secret/path leakage.
+ * Relies strictly on HttpOnly cookies for browser authentication session (credentials: 'include').
  */
 async function request(endpoint, options = {}) {
   const baseUrl = getApiBaseUrl();
@@ -36,13 +37,14 @@ async function request(endpoint, options = {}) {
 
   const headers = {
     ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
+    'X-Requested-With': 'XMLHttpRequest',
     ...(options.headers || {}),
   };
 
   let response;
   try {
     response = await fetch(url, {
-      credentials: 'omit',
+      credentials: 'include',
       ...options,
       headers,
     });
@@ -50,7 +52,7 @@ async function request(endpoint, options = {}) {
     const hostLabel = baseUrl || (typeof window !== 'undefined' ? window.location.origin : 'backend');
     throw new Error(
       `Unable to reach the Smart Contract Analyser backend at ${hostLabel}. ` +
-      `Please ensure the FastAPI backend is running and that CORS allows requests from this domain.`,
+      `Please ensure the local FastAPI backend is running on http://127.0.0.1:8000 and that CORS allows requests from this domain.`,
       { cause: netErr }
     );
   }
@@ -58,19 +60,17 @@ async function request(endpoint, options = {}) {
   const contentType = response.headers.get('content-type') || '';
   const isHtml = contentType.includes('text/html');
 
-  // Vercel static router returns HTTP 405 Method Not Allowed when receiving POST on routes without serverless functions
   if (response.status === 405) {
     throw new Error(
       `Backend service is not connected (HTTP 405 on ${endpoint}). ` +
-      `The frontend is hosted on Vercel, which requires VITE_API_BASE_URL to be set in your Vercel project environment variables ` +
-      `to point to your deployed FastAPI backend container.`
+      `Please ensure the local FastAPI backend is running on http://127.0.0.1:8000.`
     );
   }
 
   if (isHtml && !response.ok) {
     throw new Error(
       `Analysis service returned an unexpected response (status ${response.status}). ` +
-      `Please check backend availability and verify that VITE_API_BASE_URL points to the FastAPI service.`
+      `Please verify that the local FastAPI backend service is running on http://127.0.0.1:8000.`
     );
   }
 
@@ -251,6 +251,59 @@ export const api = {
   },
 
   /**
+   * Part 5: Submit an asynchronous analysis job
+   */
+  async createAnalysisJob(payload) {
+    if (typeof FormData !== 'undefined' && payload instanceof FormData) {
+      return await request('/api/v1/analyze/jobs/upload', {
+        method: 'POST',
+        body: payload,
+      });
+    }
+
+    const body = typeof payload === 'string'
+      ? { sourceCode: payload, contractName: 'Contract.sol' }
+      : payload;
+
+    return await request('/api/v1/analyze/jobs', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+  },
+
+  /**
+   * Part 5: Retrieve status and progress of an asynchronous analysis job
+   */
+  async getJobStatus(jobId) {
+    return await request(`/api/v1/jobs/${jobId}`);
+  },
+
+  /**
+   * Part 5: Cancel an in-flight or queued analysis job
+   */
+  async cancelJob(jobId) {
+    return await request(`/api/v1/jobs/${jobId}/cancel`, {
+      method: 'POST',
+    });
+  },
+
+  /**
+   * Part 5: Retrieve completed analysis result of a job
+   */
+  async getJobResult(jobId) {
+    return await request(`/api/v1/jobs/${jobId}/result`);
+  },
+
+  /**
+   * Part 5: Delete an analysis job record
+   */
+  async deleteJob(jobId) {
+    return await request(`/api/v1/jobs/${jobId}`, {
+      method: 'DELETE',
+    });
+  },
+
+  /**
    * Retrieve an audit result by analysisId from live backend or cache
    */
   async getAnalysis(analysisId) {
@@ -312,7 +365,7 @@ export const api = {
 
     let response;
     try {
-      response = await fetch(url, { credentials: 'omit' });
+      response = await fetch(url, { credentials: 'include' });
     } catch (err) {
       throw new Error(`Unable to reach the report download service. Please verify backend connectivity.`);
     }
@@ -330,6 +383,67 @@ export const api = {
     a.click();
     window.URL.revokeObjectURL(downloadUrl);
     a.remove();
+  },
+
+  /**
+   * Delete an analysis permanently from database and session cache
+   */
+  async deleteAnalysis(analysisId) {
+    memoryCache.delete(analysisId);
+    try {
+      sessionStorage.removeItem(`audit_${analysisId}`);
+    } catch (e) {
+      console.warn('Session storage delete failed:', e);
+    }
+    return await request(`/api/v1/analyze/${analysisId}`, { method: 'DELETE' });
+  },
+
+  async discardAnalysis(analysisId) {
+    return this.deleteAnalysis(analysisId);
+  },
+
+  /**
+   * Phase 4: Download uploaded/stored Solidity contract source file
+   */
+  async downloadContractSource(analysisId, filename = 'Contract.sol') {
+    const baseUrl = getApiBaseUrl();
+    const endpoint = `/api/v1/analyze/${analysisId}/file`;
+    const url = baseUrl ? `${baseUrl}${endpoint}` : endpoint;
+
+    const response = await fetch(url, {
+      credentials: 'include',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to download contract file (status ${response.status}).`);
+    }
+
+    const blob = await response.blob();
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = downloadUrl;
+    a.download = filename.endsWith('.sol') ? filename : `${filename}.sol`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(downloadUrl);
+    a.remove();
+  },
+
+  /**
+   * Phase 4: Retrieve stored files for current user
+   */
+  async listUserFiles(limit = 50) {
+    return await request(`/api/v1/files?limit=${limit}`);
+  },
+
+  /**
+   * User dashboard personal statistics
+   */
+  async getUserStats() {
+    return await request('/api/v1/user/stats');
   },
 
   /**
@@ -364,12 +478,30 @@ export const api = {
     });
   },
 
+  async logout() {
+    return await request('/api/v1/auth/logout', { method: 'POST' });
+  },
+
   async getCurrentUser() {
     try {
       return await request('/api/v1/auth/me');
     } catch {
       return null;
     }
+  },
+
+  async changePassword(currentPassword, newPassword) {
+    return await request('/api/v1/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+  },
+
+  async updateProfile(fullName, organization) {
+    return await request('/api/v1/auth/me', {
+      method: 'PUT',
+      body: JSON.stringify({ fullName, organization }),
+    });
   },
 
   /**

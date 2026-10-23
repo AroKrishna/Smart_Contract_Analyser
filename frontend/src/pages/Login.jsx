@@ -1,27 +1,38 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { ShieldCheck, Mail, Lock, ArrowRight } from 'lucide-react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { ShieldCheck, Mail, Lock, ArrowRight, AlertCircle, Info } from 'lucide-react';
 import { APP_NAME } from '../utils/constants';
+import { useAuth } from '../context/AuthContext';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
 import Card from '../components/common/Card';
 
 const Login = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { login } = useAuth();
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const from = location.state?.from?.pathname || '/dashboard';
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setErrorMessage('');
     setIsLoading(true);
 
-    // Mock authentication transition
-    setTimeout(() => {
+    try {
+      await login(email.trim(), password);
+      navigate(from, { replace: true });
+    } catch (err) {
+      setErrorMessage(err.message || 'Invalid email or password. Please try again.');
+    } finally {
       setIsLoading(false);
-      navigate('/dashboard');
-    }, 600);
+    }
   };
 
   return (
@@ -45,6 +56,20 @@ const Login = () => {
 
         {/* Login Card */}
         <Card className="border-slate-800 bg-slate-900/90 shadow-xl">
+          {location.state?.from && !errorMessage && (
+            <div className="mb-4 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 text-xs text-blue-300 flex items-center gap-2">
+              <Info className="w-4 h-4 shrink-0 text-blue-400" />
+              <span>Authentication required: Please sign in to submit a contract for analysis and persist your results.</span>
+            </div>
+          )}
+
+          {errorMessage && (
+            <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-xs text-red-400 flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{errorMessage}</span>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input
               label="Email Address"
@@ -65,13 +90,6 @@ const Login = () => {
                 >
                   Password <span className="text-red-400">*</span>
                 </label>
-                <button
-                  type="button"
-                  onClick={() => alert('Mock password reset. You can sign in with any credentials.')}
-                  className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
-                >
-                  Forgot password?
-                </button>
               </div>
               <Input
                 id="password"
@@ -120,9 +138,9 @@ const Login = () => {
           </div>
         </Card>
 
-        {/* Quick Demo Access Note */}
+        {/* Security & Access Note */}
         <p className="text-center text-[11px] text-slate-500 mt-6">
-          Decision-support prototype: You can enter any email/password to sign in.
+          Enterprise access control with bcrypt password hashing and session tokens.
         </p>
       </div>
     </div>

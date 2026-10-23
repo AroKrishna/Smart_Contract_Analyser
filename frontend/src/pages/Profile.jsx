@@ -1,44 +1,80 @@
-import { useState } from 'react';
-import { User, Mail, Building, ShieldCheck, Check, Key, Lock } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { User, Mail, Building, ShieldCheck, Check, Key, Lock, AlertCircle } from 'lucide-react';
 import Card from '../components/common/Card';
 import Input from '../components/common/Input';
 import Button from '../components/common/Button';
 import Modal from '../components/common/Modal';
+import { useAuth } from '../context/AuthContext';
+import { api } from '../services/api';
 
 const Profile = () => {
-  const [name, setName] = useState('Jane Doe');
-  const [email, setEmail] = useState('jane.doe@protocol-auditing.io');
-  const [organization, setOrganization] = useState('Decentralized Security Labs');
-  const [role, setRole] = useState('Smart Contract Legal Auditor');
+  const { user, refreshUser } = useAuth();
+
+  const [name, setName] = useState(user?.name || '');
+  const [email, setEmail] = useState(user?.email || '');
+  const [organization, setOrganization] = useState(user?.organization || '');
+  const [role, setRole] = useState(user?.role || 'auditor');
   const [saved, setSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [profileError, setProfileError] = useState('');
 
   // Password Modal State
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [passwordSuccess, setPasswordSuccess] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+  const [isPasswordLoading, setIsPasswordLoading] = useState(false);
 
-  const handlePasswordSubmit = (e) => {
+  useEffect(() => {
+    if (user) {
+      setName(user.name || '');
+      setEmail(user.email || '');
+      setOrganization(user.organization || '');
+      setRole(user.role || 'auditor');
+    }
+  }, [user]);
+
+  const handlePasswordSubmit = async (e) => {
     e.preventDefault();
-    setPasswordSuccess(true);
-    setTimeout(() => {
-      setPasswordSuccess(false);
-      setPasswordModalOpen(false);
-      setCurrentPassword('');
-      setNewPassword('');
-    }, 1500);
+    setPasswordError('');
+
+    if (newPassword.length < 8) {
+      setPasswordError('New password must be at least 8 characters long');
+      return;
+    }
+
+    setIsPasswordLoading(true);
+    try {
+      await api.changePassword(currentPassword, newPassword);
+      setPasswordSuccess(true);
+      setTimeout(() => {
+        setPasswordSuccess(false);
+        setPasswordModalOpen(false);
+        setCurrentPassword('');
+        setNewPassword('');
+      }, 1500);
+    } catch (err) {
+      setPasswordError(err.message || 'Failed to update password');
+    } finally {
+      setIsPasswordLoading(false);
+    }
   };
 
-
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
+    setProfileError('');
     setIsSaving(true);
-    setTimeout(() => {
-      setIsSaving(false);
+    try {
+      await api.updateProfile({ name, organization });
+      if (refreshUser) await refreshUser();
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
-    }, 500);
+    } catch (err) {
+      setProfileError(err.message || 'Failed to save profile changes');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -90,6 +126,13 @@ const Profile = () => {
               <div className="mb-4 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-400 flex items-center gap-2">
                 <Check className="w-4 h-4 shrink-0" />
                 <span>Profile information saved successfully.</span>
+              </div>
+            )}
+
+            {profileError && (
+              <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-xs text-red-400 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{profileError}</span>
               </div>
             )}
 
@@ -167,6 +210,13 @@ const Profile = () => {
           </div>
         ) : (
           <form onSubmit={handlePasswordSubmit} className="space-y-4">
+            {passwordError && (
+              <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-xs text-red-400 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{passwordError}</span>
+              </div>
+            )}
+
             <Input
               label="Current Password"
               id="currentPassword"
@@ -178,7 +228,7 @@ const Profile = () => {
             />
 
             <Input
-              label="New Password"
+              label="New Password (min 8 characters)"
               id="newPassword"
               type="password"
               icon={Lock}
@@ -196,7 +246,12 @@ const Profile = () => {
               >
                 Cancel
               </Button>
-              <Button variant="primary" size="sm" type="submit">
+              <Button
+                variant="primary"
+                size="sm"
+                type="submit"
+                isLoading={isPasswordLoading}
+              >
                 Save New Password
               </Button>
             </div>

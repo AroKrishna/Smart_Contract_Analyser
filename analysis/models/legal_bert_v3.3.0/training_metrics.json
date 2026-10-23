@@ -1,10 +1,7 @@
 {
-  "model_name": "nlpaueb/legal-bert-base-uncased",
+  "model_name": "analysis/models/legal_bert_v3.3.0",
   "dataset_sha256": "74464fd132e9268220549adc8e5cfb31d4ca69b9fae203b31ae2924c1500e456",
   "seed": 42,
-  "epochs": 3,
-  "batch_size": 4,
-  "learning_rate": 3e-05,
   "split_counts": {
     "train_total": 44,
     "train_real": 24,
@@ -335,5 +332,5 @@
       "micro_f1": "Globally aggregated binary precision and recall across all label decisions."
     }
   },
-  "timestamp": "2026-10-22T15:03:34"
+  "timestamp": "2026-10-23T18:11:00"
 }

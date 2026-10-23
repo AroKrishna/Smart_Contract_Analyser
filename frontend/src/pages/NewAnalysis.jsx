@@ -102,12 +102,15 @@ const NewAnalysis = () => {
   const [description, setDescription] = useState('Two-party commercial settlement with emergency recovery');
   const [activeTab, setActiveTab] = useState('paste'); // 'paste' | 'upload'
   const [solidityCode, setSolidityCode] = useState(SAMPLE_SOL_CODE);
+  const [uploadedFile, setUploadedFile] = useState(null);
   const [uploadedFileName, setUploadedFileName] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [backendStatus, setBackendStatus] = useState('checking'); // 'checking' | 'online' | 'offline'
 
   // Live real processing state (driven by backend job status)
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [activeJobId, setActiveJobId] = useState(null);
+  const pollTimeoutRef = useRef(null);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [realProgress, setRealProgress] = useState(15);
   const [realStageMessage, setRealStageMessage] = useState('Initializing pipeline...');
@@ -144,6 +147,9 @@ const NewAnalysis = () => {
 
     return () => {
       isMounted = false;
+      if (pollTimeoutRef.current) {
+        clearTimeout(pollTimeoutRef.current);
+      }
     };
   }, []);
 
@@ -164,6 +170,7 @@ const NewAnalysis = () => {
 
   const handleClearCode = () => {
     setSolidityCode('');
+    setUploadedFile(null);
     setUploadedFileName('');
     setContractName('');
     setDescription('');
@@ -184,6 +191,7 @@ const NewAnalysis = () => {
     }
 
     setErrorMessage('');
+    setUploadedFile(file);
     setUploadedFileName(file.name);
     setContractName(file.name);
 
@@ -241,11 +249,10 @@ const NewAnalysis = () => {
     // Pre-flight check: ensure backend is reachable before initiating
     if (backendStatus === 'offline') {
       const activeUrl = api.getBaseUrl();
-      const targetLabel = activeUrl ? `at ${activeUrl}` : 'on this domain';
+      const targetLabel = activeUrl ? `at ${activeUrl}` : 'on port 8000';
       setErrorMessage(
         `Cannot initiate analysis: Backend service is currently unreachable ${targetLabel}. ` +
-        `If running locally, please start the backend service on port 8000. ` +
-        `If using the deployed website, configure VITE_API_BASE_URL in your Vercel project environment variables pointing to the running backend service.`
+        `Please ensure the local FastAPI backend is running (e.g. 'uvicorn backend.main:app --host 127.0.0.1 --port 8000').`
       );
       return;
     }
@@ -258,22 +265,121 @@ const NewAnalysis = () => {
       return;
     }
 
-    // Begin synchronous pipeline processing
+    // Clear any previous polling timer
+    if (pollTimeoutRef.current) {
+      clearTimeout(pollTimeoutRef.current);
+    }
+
+    // Begin asynchronous pipeline processing via job lifecycle
     setIsAnalyzing(true);
-    setCurrentStepIndex(3);
-    setRealProgress(50);
-    setRealStageName('Neural Inference & Explainability');
-    setRealStageMessage('Executing Legal-BERT multi-label inference & computing genuine SHAP/LIME attributions...');
+    setErrorMessage('');
+    setCurrentStepIndex(0);
+    setRealProgress(15);
+    setRealStageName('Syntax Validation');
+    setRealStageMessage('Validating Solidity syntax and initializing job...');
 
     try {
-      const finalResult = await api.analyzeContract(solidityCode, contractName, description);
-      setIsAnalyzing(false);
-      navigate(`/analysis/${finalResult.analysisId}`, {
-        state: { analysisResult: finalResult }
-      });
+      const idempotencyKey = `idem-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      let job;
+
+      if (activeTab === 'upload' && uploadedFile) {
+        const formData = new FormData();
+        formData.append('file', uploadedFile);
+        formData.append('contract_name', contractName || uploadedFile.name);
+        formData.append('description', description || '');
+        formData.append('idempotency_key', idempotencyKey);
+        job = await api.createAnalysisJob(formData);
+      } else {
+        const jobPayload = {
+          sourceCode: solidityCode,
+          contractName: contractName || 'Contract.sol',
+          description: description || '',
+          idempotencyKey,
+        };
+        job = await api.createAnalysisJob(jobPayload);
+      }
+
+      const jobId = job.jobId;
+      setActiveJobId(jobId);
+
+      const pollInterval = 1200;
+      const maxAttempts = 150;
+      let attempts = 0;
+
+      const stageMap = {
+        validating: { name: 'Syntax Validation', step: 0 },
+        parsing: { name: 'AST & Clause Extraction', step: 1 },
+        inferring: { name: 'Neural Legal-BERT Inference', step: 3 },
+        attributing: { name: 'XAI Token Attribution (SHAP/LIME)', step: 5 },
+        explaining: { name: 'XAI Token Attribution (SHAP/LIME)', step: 5 },
+        saving: { name: 'Synthesizing Compliance & Persistence', step: 6 },
+        completed: { name: 'Audit Finalized', step: 7 },
+      };
+
+      const poll = async () => {
+        try {
+          const statusRes = await api.getJobStatus(jobId);
+          if (typeof statusRes.progress === 'number') {
+            setRealProgress(statusRes.progress);
+          }
+          if (statusRes.stageMessage) {
+            setRealStageMessage(statusRes.stageMessage);
+          }
+          if (statusRes.stage && stageMap[statusRes.stage]) {
+            setRealStageName(stageMap[statusRes.stage].name);
+            setCurrentStepIndex(stageMap[statusRes.stage].step);
+          }
+
+          if (statusRes.status === 'completed') {
+            setIsAnalyzing(false);
+            const finalResult = statusRes.result || (await api.getJobResult(jobId));
+            navigate(`/analysis/${finalResult.analysisId}`, {
+              state: { analysisResult: finalResult }
+            });
+            return;
+          }
+
+          if (statusRes.status === 'cancelled') {
+            setIsAnalyzing(false);
+            setErrorMessage('Analysis job was cancelled.');
+            return;
+          }
+
+          if (statusRes.status === 'failed') {
+            setIsAnalyzing(false);
+            const errDetail = statusRes.error?.message || statusRes.stageMessage || 'Analysis job failed.';
+            setErrorMessage(`Analysis failed: ${errDetail}. Please verify contract syntax and retry.`);
+            return;
+          }
+
+          attempts++;
+          if (attempts < maxAttempts) {
+            pollTimeoutRef.current = setTimeout(poll, pollInterval);
+          } else {
+            setIsAnalyzing(false);
+            setErrorMessage('Analysis job timed out. You can retrieve completed results from Audit History.');
+          }
+        } catch (pollErr) {
+          setIsAnalyzing(false);
+          setErrorMessage(`Error checking job status: ${pollErr.message}`);
+        }
+      };
+
+      pollTimeoutRef.current = setTimeout(poll, pollInterval);
     } catch (err) {
       setIsAnalyzing(false);
       setErrorMessage(err.message || 'Analysis execution failed on the backend.');
+    }
+  };
+
+  const handleCancelAnalysis = async () => {
+    if (activeJobId) {
+      try {
+        setRealStageMessage('Cancelling analysis job...');
+        await api.cancelJob(activeJobId);
+      } catch (err) {
+        console.warn('Failed to cancel job:', err);
+      }
     }
   };
 
@@ -286,6 +392,7 @@ const NewAnalysis = () => {
         progressPercent={realProgress}
         stageMessage={realStageMessage}
         stageName={realStageName}
+        onCancel={handleCancelAnalysis}
       />
     );
   }
@@ -306,7 +413,7 @@ const NewAnalysis = () => {
             {backendStatus === 'online' ? (
               <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-mono">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                Legal-BERT Engine Online
+                Legal-BERT Online (Experimental v3.3.0)
               </span>
             ) : backendStatus === 'model_unavailable' ? (
               <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[11px] font-mono">
@@ -326,7 +433,7 @@ const NewAnalysis = () => {
             )}
           </div>
           <p className="text-xs sm:text-sm text-slate-400 mt-1">
-            Phase 1 No-Login Audit: Upload or paste a Solidity contract (.sol) for Legal-BERT multi-label operational hazard classification.
+            Enterprise AI Audit: Upload or paste a Solidity contract (.sol) for Legal-BERT multi-label operational hazard classification.
           </p>
         </div>
 
@@ -352,12 +459,23 @@ const NewAnalysis = () => {
         </div>
       </div>
 
-      {/* Ephemeral Notice Banner */}
+      {/* Experimental Model Advisory */}
+      <div className="bg-amber-950/20 border border-amber-500/25 rounded-xl p-3.5 text-xs text-amber-200/90 flex items-start gap-2.5">
+        <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+        <div className="space-y-0.5">
+          <span className="font-semibold text-amber-300">Experimental Decision-Support Notice: </span>
+          <span>
+            The Legal-BERT classification engine is an experimental research model evaluated on small-data benchmarks under strict project isolation. Predictions and SHAP/LIME attributions serve as operational decision-support indicators, not authoritative legal counsel or guarantees.
+          </span>
+        </div>
+      </div>
+
+      {/* Secure Storage & Retention Notice Banner */}
       <div className="p-3.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-xs text-blue-200 flex items-start gap-3">
         <Cpu className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
         <div className="leading-relaxed">
-          <span className="font-semibold text-blue-100">Phase 1 Ephemeral Session: </span>
-          Uploaded contracts and generated reports are held strictly in temporary memory (30-minute retention) and are never permanently stored.
+          <span className="font-semibold text-blue-100">Secure Sandboxed Storage: </span>
+          Uploaded contracts are stored in user-isolated sandboxed storage with a 30-day retention window and complete on-demand deletion.
         </div>
       </div>
 
@@ -367,7 +485,7 @@ const NewAnalysis = () => {
           <AlertCircle className="w-4 h-4 shrink-0 text-amber-400 mt-0.5" />
           <div className="leading-relaxed">
             <span className="font-semibold text-amber-200">Backend service not connected: </span>
-            Start your FastAPI service locally (<code className="px-1 py-0.5 bg-amber-950/60 rounded font-mono text-amber-200">uvicorn analysis.api:app --port 8000</code>), or set <code className="px-1 py-0.5 bg-amber-950/60 rounded font-mono text-amber-200">VITE_API_BASE_URL</code> in your cloud host settings to connect to your deployed FastAPI backend container.
+            Start your FastAPI service locally (<code className="px-1 py-0.5 bg-amber-950/60 rounded font-mono text-amber-200">uvicorn backend.main:app --host 127.0.0.1 --port 8000</code>), or verify your local backend connection.
           </div>
         </div>
       )}
@@ -497,7 +615,7 @@ const NewAnalysis = () => {
                         {uploadedFileName || 'Click or drag and drop your Solidity contract (.sol) here'}
                       </p>
                       <p className="text-xs text-slate-400 mt-1">
-                        Accepts standard Solidity files (.sol up to 2MB). Ephemeral analysis without registration.
+                        Accepts standard Solidity files (.sol up to 1MB). Stored in secure user-isolated storage.
                       </p>
                     </div>
                   </div>

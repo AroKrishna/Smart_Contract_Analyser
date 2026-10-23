@@ -132,9 +132,11 @@ See [docs/CURRENT_STATE_AND_GAPS.md](docs/CURRENT_STATE_AND_GAPS.md) for the com
 
 ### Prerequisites
 * **Python** (v3.10+ recommended, verified on 3.14.3)
-* **Node.js** (v18.0 or newer recommended)
+* **Node.js** (v18.0 or newer recommended, verified on v20+)
 * **npm** (v9.0 or newer)
 * **Docker & Docker Compose** (optional, for containerized execution)
+
+---
 
 ### 1. Clone the repository
 ```bash
@@ -142,30 +144,56 @@ git clone https://github.com/AroKrishna/Smart_Contract_Analyser_Private.git
 cd Smart_Contract_Analyser_Private
 ```
 
+---
+
 ### 2. Configure Environment Variables
-Copy the template configuration:
+Copy the template configuration into `.env` in the project root:
+
+**Windows (PowerShell):**
+```powershell
+Copy-Item .env.example .env
+```
+
+**Linux / macOS (Bash):**
 ```bash
 cp .env.example .env
 ```
-Key variables configured in `.env` (or in your hosting provider's dashboard):
-- `ALLOWED_ORIGINS`: Comma-separated CORS origins (e.g. `http://localhost:5173,http://localhost:80`).
-- `MAX_CONCURRENT_ANALYSIS_JOBS`: Concurrency throttle for CPU protection (default: `2`).
-- `RATE_LIMIT_PER_MINUTE`: Sliding-window submission limit per client IP (default: `10`).
-- `ANALYSIS_TTL_MINUTES`: Ephemeral in-memory analysis retention TTL (default: `30`).
+
+Key variables configured in `.env` (with safe default placeholders):
+- `ALLOWED_ORIGINS`: Comma-separated CORS origins (defaults to `http://localhost:5173,http://127.0.0.1:5173`).
+- `MAX_CONCURRENT_ANALYSIS_JOBS`: Concurrency throttle for CPU protection (default: `1`).
+- `RATE_LIMIT_PER_MINUTE`: Sliding-window submission limit per client IP (default: `20`).
+- `ANALYSIS_TTL_MINUTES`: In-memory analysis retention TTL in minutes (default: `30`).
 - `MAX_STORED_ANALYSES`: Maximum in-memory FIFO analyses cache (default: `100`).
-- `VITE_API_BASE_URL`: (Frontend only) Target API domain if the frontend is hosted separately from the backend (leave blank when using relative `/api` paths with the local proxy or Nginx).
-- `MODEL_WEIGHTS_URL`: Optional direct HTTPS URL to automatically download the Legal-BERT weights if absent.
-- `EXPECTED_MODEL_SHA256`: Optional expected SHA-256 hash for verifying model weights on automated download (`4c5d1c1caf6f42e38173d6fc1b69a924cf2ad93e0188e0f5bb057ac0b73d972e`).
+- `STORAGE_DIR`: Local filesystem storage directory for uploaded `.sol` files (defaults to `backend/data/storage`).
+- `DATA_RETENTION_DAYS`: Retention lifecycle period for analyses and uploaded contracts (default: `30` days).
+- `JWT_SECRET`: Secret key used for signing session tokens (pre-configured for development; change for production).
+- `SEED_DEV_ACCOUNTS`: Automatically seeds local test accounts when set to `true` (default: `true` in local development).
+- `MODEL_WEIGHTS_URL`: Optional direct HTTPS URL to download weights automatically if absent.
+- `EXPECTED_MODEL_SHA256`: Expected SHA-256 hash for verifying model weights (`4c5d1c1caf6f42e38173d6fc1b69a924cf2ad93e0188e0f5bb057ac0b73d972e`).
+
+---
 
 ### 3. Legal-BERT Model Checkpoint Setup
-The active Phase 1 engine expects the fine-tuned Legal-BERT checkpoint at:
-`analysis/models/legal_bert_v3.3.0/model.safetensors` (or `backend/analysis/models/legal_bert_v3.3.0/model.safetensors`, ~438 MB).
+The active analysis engine expects the fine-tuned Legal-BERT checkpoint at:
+`analysis/models/legal_bert_v3.3.0/model.safetensors` (~438 MB).
+*(The backend also automatically recognizes `backend/analysis/models/legal_bert_v3.3.0/model.safetensors`).*
 
 > [!NOTE]
-> Because ordinary GitHub repositories reject files exceeding 100 MiB and Git LFS is omitted to prevent bandwidth quotas and billing issues, the binary model weight file is excluded from Git via `.gitignore`. The model architecture config, tokenizer definitions, and training metrics are tracked in the repository.
+> Because ordinary Git repositories reject files exceeding 100 MiB and Git LFS is omitted to prevent bandwidth quotas, binary model weight files are excluded from Git via `.gitignore`. Model architecture configs (`config.json`), tokenizer definitions, and training metrics are tracked in the repository.
 
-#### Option A: Download Pre-Trained Weights from Release (Recommended)
-You can directly download the official release asset for version `v3.3.0`:
+#### Option A: Automated Cross-Platform Setup Script (Recommended)
+Use the included model setup script to download and verify the checksum in one command:
+```bash
+python scripts/setup_model.py
+```
+To check an existing local checkpoint without re-downloading:
+```bash
+python scripts/setup_model.py --check-only
+```
+
+#### Option B: Manual Download from Official Release Asset
+You can download the verified release asset directly:
 
 - **Release Asset URL**:
   `https://github.com/AroKrishna/Smart_Contract_Analyser/releases/download/v3.3.0/model.safetensors`
@@ -198,92 +226,157 @@ curl -L -o analysis/models/legal_bert_v3.3.0/model.safetensors "https://github.c
 sha256sum analysis/models/legal_bert_v3.3.0/model.safetensors
 # macOS:
 shasum -a 256 analysis/models/legal_bert_v3.3.0/model.safetensors
-# Expected: 4c5d1c1caf6f42e38173d6fc1b69a924cf2ad93e0188e0f5bb057ac0b73d972e
+# Expected output: 4c5d1c1caf6f42e38173d6fc1b69a924cf2ad93e0188e0f5bb057ac0b73d972e
 ```
 
-*(Note: You may also place a copy into `backend/analysis/models/legal_bert_v3.3.0/model.safetensors`; the backend checks both paths).*
-
-#### Option B: Automated Runtime Acquisition via Environment Variables
-Alternatively, configure your `.env` with:
+#### Option C: Automated Runtime Acquisition via Environment Variables
+Configure your `.env` with:
 ```bash
 MODEL_WEIGHTS_URL=https://github.com/AroKrishna/Smart_Contract_Analyser/releases/download/v3.3.0/model.safetensors
 EXPECTED_MODEL_SHA256=4c5d1c1caf6f42e38173d6fc1b69a924cf2ad93e0188e0f5bb057ac0b73d972e
 ```
-On boot or first request, the backend engine will download the weights into ephemeral cache and validate the checksum automatically.
+On boot or first request, the backend engine safely downloads the weights into cache, verifies the SHA-256 checksum, and performs an atomic file swap.
 
-#### Option C: Train Locally from Canonical Dataset
-```bash
-python -m analysis.train_legal_bert
-```
-This trains the multi-label model on `data/ml_candidates/final_dataset.jsonl` and saves the weights to `analysis/models/legal_bert_v3.3.0/model.safetensors`.
-
-#### Model Readiness Verification
-If the checkpoint is missing or corrupted, the backend will return a transparent `HTTP 503` readiness status at `/ready` explaining that the checkpoint is absent, rather than generating misleading mock predictions. Once downloaded:
+#### Strict Model Integrity Gating
+If model weights are missing or have an invalid checksum, the system **never generates mock, simulated, or rule-substituted predictions**:
+- `GET /ready` returns `HTTP 503 Service Unavailable` with `"status": "not_ready"`.
+- `POST /api/v1/analyze` returns transparent `"status": "model_unavailable"` with exact dataset readiness diagnostics.
+Once the valid checkpoint is present:
 ```bash
 curl http://127.0.0.1:8000/ready
-# Returns: {"status":"ready","checkpointName":"legal_bert_v3.3.0", ...}
+# Returns HTTP 200: {"status":"ready","checkpointName":"legal_bert_v3.3.0", ...}
 ```
 
-### 4. Start the FastAPI Backend Service
-```bash
-# Optional: create and activate a virtual environment
+---
+
+### 4. Start the FastAPI Backend (Terminal 1)
+
+**Windows (PowerShell):**
+```powershell
+# Create and activate virtual environment
 python -m venv .venv
-# Windows:
-.venv\Scripts\activate
-# Linux/macOS:
+.venv\Scripts\Activate.ps1
+
+# Install backend dependencies
+pip install -r requirements.txt
+
+# Launch API server on port 8000
+uvicorn backend.main:app --host 127.0.0.1 --port 8000 --reload
+```
+
+**Linux / macOS (Bash):**
+```bash
+# Create and activate virtual environment
+python3 -m venv .venv
 source .venv/bin/activate
 
 # Install backend dependencies
 pip install -r requirements.txt
 
-# Launch API server on port 8000 (single worker required for shared in-memory job store)
-uvicorn analysis.api:app --host 127.0.0.1 --port 8000 --reload
+# Launch API server on port 8000
+uvicorn backend.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
-### 5. Run Backend Tests
-Run the test suite covering API contracts, model readiness gating, and dataset validation:
-```bash
-python -m pytest tests/
-```
+To stop the backend service: press `Ctrl + C` in the backend terminal.
 
-### 6. Install and Run the Frontend
-In a separate terminal:
+#### Verified Local Backend Endpoints:
+- **Backend Health Check**: [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health)
+- **Model Readiness Probe**: [http://127.0.0.1:8000/ready](http://127.0.0.1:8000/ready)
+- **Interactive Swagger Docs**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+- **ReDoc API Documentation**: [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/redoc)
+
+---
+
+### 5. Start the React Frontend (Terminal 2)
+
+In a second terminal:
+
+**Windows / Linux / macOS:**
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
-Open **`http://localhost:5173/`** in your browser. The Vite development server automatically proxies `/api` and `/ready` requests to `http://127.0.0.1:8000`.
 
-### 7. Run via Docker Compose (Alternative)
-To run both backend and frontend in containerized isolation:
-```bash
-docker compose up --build
-```
-Access the application at `http://localhost/`.
+To stop the frontend service: press `Ctrl + C` in the frontend terminal.
+
+#### Verified Local Frontend URL:
+- **Frontend Web Application**: [http://localhost:5173/](http://localhost:5173/)
+
+The Vite development server automatically proxies `/api`, `/health`, and `/ready` requests to the local backend at `http://127.0.0.1:8000`.
 
 ---
 
-## 🌐 Deployment Architecture
+### 6. Local First-Use Walkthrough
 
-### Frontend Deployment (Vercel / Netlify / Static CDN)
-The frontend is a static React Single Page Application (SPA).
-* **Vercel**: Set **Root Directory** to `frontend`. The configuration in [`frontend/vercel.json`](frontend/vercel.json) routes all client paths to `index.html`.
-* Set the environment variable `VITE_API_BASE_URL` in the Vercel dashboard to your live backend URL (e.g. `https://api.yourdomain.com`).
-* **Netlify**: Configured via `frontend/public/_redirects`.
+1. **Access Application**: Navigate to [http://localhost:5173/](http://localhost:5173/) in your web browser.
+2. **Account Registration / Login**:
+   - Register a new local account at `/register` (name, email, password, organization), or:
+   - Log in using seeded development credentials:
+     - **Auditor**: `auditor@enterprise.com` / `AuditorPass2026!`
+     - **Admin**: `admin@legal-ai.io` / `AdminPass2026!`
+3. **Submit a Contract for Analysis**:
+   - Navigate to `/analysis/new`.
+   - Paste raw Solidity code or upload a `.sol` contract file (sample contracts are provided in `sample_contracts/` and the UI sample buttons).
+   - Click **Run Legal-BERT Analysis**.
+4. **Inspect Real-Time Analysis Progress**:
+   - The interactive stepper tracks the asynchronous pipeline stages: Syntax Validation ➔ AST Clause Extraction ➔ Neural Legal-BERT Inference ➔ XAI Token Attribution (SHAP/LIME) ➔ Compliance Synthesis & Persistence.
+5. **Review Analysis Results**:
+   - View the overall composite risk score and category breakdown (Privacy, Termination, Legal Compliance, Liability, Payment / Financial).
+   - Inspect the interactive code viewer with syntax highlighting and hazard line badges.
+   - Click clauses to review the **Explainable AI (XAI)** token attributions (SHAP marginal contribution and LIME interpretability breakdown).
+   - Review side-by-side remediation recommendations (risky clause vs safer alternative).
+6. **Query the AI Legal Assistant**:
+   - In the results panel, chat with the context-scoped AI assistant. The assistant answers questions strictly grounded in the analyzed contract's findings and statutory matrix.
+7. **Export Audit Reports**:
+   - Download professional **PDF** and editable **DOCX** audit reports directly from `/reports` or the results dashboard.
+8. **Manage History & Data Deletion**:
+   - View historical audits at `/history`.
+   - Perform cascading deletion of any audit: removes the database record, physical uploaded file, and background jobs permanently from local storage.
 
-> [!IMPORTANT]
-> **Vercel hosts ONLY the frontend SPA.**  
-> The Python FastAPI backend relies on in-memory asynchronous job queues and long-running deep learning inference (PyTorch, SHAP, LIME). It is **not** supported on Vercel Serverless Functions.
+---
 
-### Backend Deployment (Render / Railway / Fly.io / VPS)
-The backend must run on a persistent, single-container compute instance with at least 2 GB RAM:
-* **Render**: Web Service using Docker environment ([Dockerfile](Dockerfile)).
-* **Railway**: Web Service using Dockerfile.
-* **Fly.io**: Dedicated Machine deployment via `flyctl`.
-* **Self-Hosted VPS**: Managed via [docker-compose.yml](docker-compose.yml) with Nginx reverse proxy and SSL.
+### 7. Local Storage & Data Lifecycle Locations
 
-For complete step-by-step production setup and hosting guides, refer to [docs/DEPLOYMENT_GUIDE.md](docs/DEPLOYMENT_GUIDE.md).
+All application state, user accounts, uploaded files, and model weights remain strictly on your local computer:
+
+| Asset | Local Location | Description |
+|:---|:---|:---|
+| **Database** | `backend/data/transient_smart_contract_analyser.db` | SQLite database storing accounts, analysis metadata, jobs, and file references. |
+| **Uploaded Files** | `backend/data/storage/<user_id>/` | User-sandboxed local directory holding uploaded `.sol` contract source files. |
+| **Model Checkpoint** | `analysis/models/legal_bert_v3.3.0/` | Fine-tuned Legal-BERT multi-label model weights (`model.safetensors`, `config.json`, tokenizer). |
+| **Generated Reports** | Streamed dynamically | PDF and DOCX reports are generated on-the-fly via ReportLab and python-docx. |
+
+---
+
+### 8. Verification & Running the Tests
+
+To run the complete automated test suite (85 tests covering API contracts, authentication, ownership isolation, job lifecycles, and storage sandboxing):
+```bash
+python -m pytest tests/
+```
+
+To run the frontend production build verification:
+```bash
+cd frontend
+npm run build
+```
+
+---
+
+### 9. Scientific Disclosure & Model Limitations
+
+In accordance with academic and engineering integrity standards:
+
+1. **Dataset Scope & Low-Prevalence Support**:
+   - The fine-tuned Legal-BERT multi-label classifier is trained on a frozen canonical dataset of 58 eligible contracts (38 real-source, 20 synthetic in train).
+   - On the strictly isolated, held-out test split (7 real-source contracts across independent projects `anvil_protocol`, `aragon_vault`, `crytic_not_so_smart_contracts`, and `virtuals_genesis`), real-world prevalence of certain hazards (**Privacy**, **Liability**, and **Payment / Financial**) is zero.
+   - For these zero-support categories, recall and F1 cannot be mathematically evaluated; they are transparently reported as inconclusive rather than substituting fabricated scores.
+2. **Model Classification Scores**:
+   - On CPU inference with the small sample size, predicted logits fall below the uncalibrated 0.50 threshold on test data. See [docs/LEGAL_BERT_EXPERIMENT_REPORT.md](docs/LEGAL_BERT_EXPERIMENT_REPORT.md) for full empirical loss curves and evaluation tables.
+3. **Decision-Support Boundary**:
+   - The platform provides operational pre-deployment risk triaging for developers and auditors.
+   - Output does not constitute judicial rulings, binding legal opinions, or guarantees of statutory compliance under any jurisdiction. All automated findings should be reviewed by qualified legal counsel.
 
 ---
 

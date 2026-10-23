@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   FileCheck,
@@ -14,8 +15,53 @@ import RiskOverview from '../components/dashboard/RiskOverview';
 import RecentAnalysis from '../components/dashboard/RecentAnalysis';
 import Button from '../components/common/Button';
 import { mockDashboardStats, mockContracts } from '../data/mockData';
+import { useAuth } from '../context/AuthContext';
+import { api } from '../services/api';
 
 const Dashboard = () => {
+  const { user, isAuthenticated } = useAuth();
+  const [stats, setStats] = useState(null);
+  const [recentAnalyses, setRecentAnalyses] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    async function fetchStats() {
+      if (!isAuthenticated) {
+        setStats(null);
+        setRecentAnalyses([]);
+        return;
+      }
+
+      setLoading(true);
+      try {
+        const data = await api.getUserStats();
+        if (!isCancelled && data) {
+          setStats(data);
+          if (data.recentAnalyses && data.recentAnalyses.length > 0) {
+            setRecentAnalyses(data.recentAnalyses);
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to load user dashboard stats:', err);
+      } finally {
+        if (!isCancelled) setLoading(false);
+      }
+    }
+
+    fetchStats();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [isAuthenticated]);
+
+  const activeStats = stats || mockDashboardStats;
+  const activeRecent = (recentAnalyses && recentAnalyses.length > 0)
+    ? recentAnalyses
+    : (isAuthenticated && stats ? [] : mockContracts);
+
   return (
     <div className="space-y-8">
       {/* ============================================================ */}
@@ -27,8 +73,13 @@ const Dashboard = () => {
             <span className="text-xs font-semibold text-blue-400 font-mono uppercase tracking-wider">
               Decision Support Center
             </span>
+            <span className="px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-mono">
+              Legal-BERT v3.3.0 (Experimental)
+            </span>
             <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-            <span className="text-xs text-slate-400">Pre-Deployment Auditing</span>
+            <span className="text-xs text-slate-400">
+              {user ? `Auditor: ${user.fullName || user.email}` : 'Pre-Deployment Auditing'}
+            </span>
           </div>
           <h2 className="text-2xl font-bold tracking-tight text-slate-100">
             Smart Contract Risk Assessment
@@ -53,24 +104,24 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="Contracts Audited"
-          value={mockDashboardStats.totalAnalyzed}
-          subtitle="Total Solidity contracts analyzed"
+          value={activeStats.totalAnalyzed ?? 0}
+          subtitle={isAuthenticated ? "Your analyzed Solidity contracts" : "Total Solidity contracts analyzed"}
           icon={FileCheck}
-          badgeText="Active"
+          badgeText={isAuthenticated ? "Personal" : "Demo"}
         />
 
         <StatCard
           title="Average Legal Risk"
-          value={`${mockDashboardStats.averageRiskScore}/100`}
+          value={`${activeStats.averageRiskScore ?? 0}/100`}
           subtitle="Aggregate cross-category score"
           icon={Activity}
-          badgeText="Medium"
+          badgeText="Score"
           badgeVariant="warning"
         />
 
         <StatCard
           title="High Risk Flagged"
-          value={mockDashboardStats.highRiskCount}
+          value={activeStats.highRiskCount ?? 0}
           subtitle="Contracts with Critical/High clauses"
           icon={AlertTriangle}
           badgeText="Review Required"
@@ -79,7 +130,7 @@ const Dashboard = () => {
 
         <StatCard
           title="Compliant Baseline"
-          value={mockDashboardStats.lowRiskCount}
+          value={activeStats.lowRiskCount ?? 0}
           subtitle="Passed standard risk boundaries"
           icon={ShieldCheck}
           badgeText="Low Risk"
@@ -92,7 +143,7 @@ const Dashboard = () => {
       {/* ============================================================ */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <RecentAnalysis contracts={mockContracts} />
+          <RecentAnalysis contracts={activeRecent} />
         </div>
 
         <div className="space-y-6">

@@ -12,9 +12,11 @@ import {
   Scale,
 } from 'lucide-react';
 import { APP_NAME } from '../../utils/constants';
+import { useAuth } from '../../context/AuthContext';
 
 const Sidebar = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
+  const { user, logout, isAuthenticated } = useAuth();
 
   const mainNavigation = [
     { name: 'Dashboard', to: '/dashboard', icon: LayoutDashboard },
@@ -26,11 +28,16 @@ const Sidebar = ({ isOpen, onClose }) => {
   const secondaryNavigation = [
     { name: 'Profile', to: '/profile', icon: User },
     { name: 'Settings', to: '/settings', icon: Settings },
-    { name: 'Admin Panel', to: '/admin', icon: ShieldCheck },
+    ...(user?.role === 'admin' ? [{ name: 'Admin Panel', to: '/admin', icon: ShieldCheck }] : []),
   ];
 
-  const handleSignOut = () => {
-    navigate('/login');
+  const handleSignOut = async () => {
+    try {
+      await logout();
+    } finally {
+      if (onClose) onClose();
+      navigate('/login');
+    }
   };
 
   const navLinkClass = ({ isActive }) =>
@@ -141,17 +148,49 @@ const Sidebar = ({ isOpen, onClose }) => {
 
         {/* Bottom User Profile Section */}
         <div className="p-3 border-t border-slate-800/80 bg-slate-950">
-          <div className="flex items-center justify-between p-2 rounded-lg bg-slate-900/40 border border-slate-800/60">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-7 h-7 rounded-full bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-xs font-semibold text-blue-300 shrink-0">
-                GA
+          {isAuthenticated && user ? (
+            <div className="flex items-center justify-between p-2 rounded-lg bg-slate-900/40 border border-slate-800/60">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-full bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-xs font-semibold text-blue-300 shrink-0 uppercase">
+                  {user.name ? user.name.slice(0, 2) : user.email.slice(0, 2)}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-xs font-medium text-slate-200 truncate">
+                    {user.name || user.email}
+                  </div>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className="text-[10px] text-slate-400 truncate max-w-[90px]">{user.email}</span>
+                    <span className={`text-[9px] px-1 py-0.2 rounded font-mono uppercase ${user.role === 'admin' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'}`}>
+                      {user.role}
+                    </span>
+                  </div>
+                </div>
               </div>
-              <div className="min-w-0 flex-1">
-                <div className="text-xs font-medium text-slate-200 truncate">Guest Auditor</div>
-                <div className="text-[10px] text-emerald-400 font-mono truncate">Phase 1: No-Login Mode</div>
+              <button
+                type="button"
+                onClick={handleSignOut}
+                className="p-1.5 rounded-md text-slate-400 hover:text-red-400 hover:bg-slate-800 transition-colors ml-1 shrink-0"
+                title="Sign out"
+                aria-label="Sign out"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between p-2 rounded-lg bg-slate-900/40 border border-slate-800/60">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-7 h-7 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-semibold text-slate-400 shrink-0">
+                  GA
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-xs font-medium text-slate-300 truncate">Guest Session</div>
+                  <Link to="/login" className="text-[10px] text-blue-400 hover:text-blue-300 font-medium">
+                    Sign in to account
+                  </Link>
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </aside>
     </>

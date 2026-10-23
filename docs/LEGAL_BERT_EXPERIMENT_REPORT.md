@@ -83,31 +83,75 @@ In accordance with evaluation integrity rules, threshold selection was evaluated
 - **Outcome**: Because validation data contains zero positive ground-truth examples, empirical threshold calibration is mathematically unfeasible (calibrating on pure negatives would collapse probability thresholds). All five categories retained the default threshold of **0.50** (`default_uncalibrated`).
 
 ### 4.2 Legal-BERT Evaluation on Untouched Real-Source Test Split ($N=7$)
+- **Split**: Held-out `test` split ($N=7$, 100% real-source contracts from projects `anvil_protocol`, `aragon_vault`, `crytic_not_so_smart_contracts`, `virtuals_genesis`).
+- **Threshold**: `0.50` default uncalibrated across all 5 heads (calibration unfeasible on validation data due to zero positive validation support).
+- **Inference Results**: Predicted logits range from `-1.51` to `-1.03` (sigmoid probabilities `0.180` to `0.263`), all strictly below the 0.50 threshold.
 
 ```
-+---------------------+--------+-----+-----+----+----+----+----+--------+--------+--------+------------------------------------+
-| Category            | Thresh | Pos | Neg | TP | FP | FN | TN | Prec   | Recall | F1     | Support Status                     |
-+---------------------+--------+-----+-----+----+----+----+----+--------+--------+--------+------------------------------------+
-| Privacy             |  0.50  |  0  |  7  |  0 |  0 |  0 |  7 | 0.0000 | 0.0000 | 0.0000 | inconclusive_zero_positive_support |
-| Termination         |  0.50  |  3  |  4  |  0 |  0 |  3 |  4 | 0.0000 | 0.0000 | 0.0000 | sufficient_support (N=3)           |
-| Legal Compliance    |  0.50  |  4  |  3  |  0 |  0 |  4 |  3 | 0.0000 | 0.0000 | 0.0000 | sufficient_support (N=4)           |
-| Liability           |  0.50  |  0  |  7  |  0 |  0 |  0 |  7 | 0.0000 | 0.0000 | 0.0000 | inconclusive_zero_positive_support |
-| Payment / Financial |  0.50  |  0  |  7  |  0 |  0 |  0 |  7 | 0.0000 | 0.0000 | 0.0000 | inconclusive_zero_positive_support |
-+---------------------+--------+-----+-----+----+----+----+----+--------+--------+--------+------------------------------------+
++---------------------+--------+-----+-----+----+----+----+----+--------+--------+--------+--------+------------------------------------+
+| Category            | Thresh | Pos | Neg | TP | FP | FN | TN | Prec   | Recall | F1     | Spec   | Support Status                     |
++---------------------+--------+-----+-----+----+----+----+----+--------+--------+--------+--------+------------------------------------+
+| Privacy             |  0.50  |  0  |  7  |  0 |  0 |  0 |  7 | 0.0000 | 0.0000 | 0.0000 | 1.0000 | Inconclusive (0 positive support)  |
+| Termination         |  0.50  |  3  |  4  |  0 |  0 |  3 |  4 | 0.0000 | 0.0000 | 0.0000 | 1.0000 | Evaluable (N=3 positives)          |
+| Legal Compliance    |  0.50  |  4  |  3  |  0 |  0 |  4 |  3 | 0.0000 | 0.0000 | 0.0000 | 1.0000 | Evaluable (N=4 positives)          |
+| Liability           |  0.50  |  0  |  7  |  0 |  0 |  0 |  7 | 0.0000 | 0.0000 | 0.0000 | 1.0000 | Inconclusive (0 positive support)  |
+| Payment / Financial |  0.50  |  0  |  7  |  0 |  0 |  0 |  7 | 0.0000 | 0.0000 | 0.0000 | 1.0000 | Inconclusive (0 positive support)  |
++---------------------+--------+-----+-----+----+----+----+----+--------+--------+--------+--------+------------------------------------+
+| Global / Overall    |  0.50  |  7  | 28  |  0 |  0 |  7 | 28 | 0.0000 | 0.0000 | 0.0000 | 1.0000 | 35 binary decisions total          |
++---------------------+--------+-----+-----+----+----+----+----+--------+--------+--------+--------+------------------------------------+
 ```
 
-- **Macro F1 (All Categories)**: `0.0000` (Unweighted mean across all 5 categories; zero-support categories contribute 0.0).
-- **Macro F1 (Evaluable Categories: Termination & Legal Compliance)**: `0.0000`.
-- **Micro F1**: `0.0000`.
-- **Hamming Loss**: `0.2000` (7 errors out of 35 binary decisions).
-- **Specificity (True Negative Rate)**: **100.0%** (28 / 28 negative decisions across all categories were correctly predicted negative; zero false alarms).
+- **Global Confusion Counts**: TP = 0, FP = 0, FN = 7, TN = 28 (across 35 binary classifications).
+- **Macro Precision**: `0.0000` (Macro-averaged over all 5 categories)
+- **Macro Recall**: `0.0000`
+- **Macro F1 (All Categories)**: `0.0000`
+- **Macro F1 (Evaluable Categories: Termination & Legal Compliance)**: `0.0000`
+- **Micro Precision**: `0.0000` (0 / (0 + 0) defined as 0.0)
+- **Micro Recall**: `0.0000` (0 / 7)
+- **Micro F1**: `0.0000`
+- **Hamming Loss**: `0.2000` (7 errors out of 35 binary decisions = 7/35 = 0.2000)
+- **Specificity (True Negative Rate)**: **100.0%** (28 / 28 negative ground-truth decisions correctly classified as negative; zero false positives)
 
-### 4.3 Baseline Model Comparison (TF-IDF + Logistic Regression)
-On the exact same test split, the deterministic TF-IDF baseline yielded:
-- **Baseline Macro F1 (All Categories)**: `0.1600`
-- **Baseline Macro F1 (Evaluable Categories)**: `0.4000`
-- **Baseline Micro F1**: `0.4444`
-- **Baseline True Positives**: Detected 2 positives in Legal Compliance (`CAN-030`, `CAN-031`) with 2 false positives.
+---
+
+### 4.3 Machine-Generated Baseline Evaluation (TF-IDF + Logistic Regression)
+Evaluated deterministically against the identical held-out test split ($N=7$, 7 positive labels, 28 negative labels, threshold = 0.50):
+
+```
++---------------------+--------+-----+-----+----+----+----+----+--------+--------+--------+--------+------------------------------------+
+| Category            | Thresh | Pos | Neg | TP | FP | FN | TN | Prec   | Recall | F1     | Spec   | Support Status                     |
++---------------------+--------+-----+-----+----+----+----+----+--------+--------+--------+--------+------------------------------------+
+| Privacy             |  0.50  |  0  |  7  |  0 |  0 |  0 |  7 | 0.0000 | 0.0000 | 0.0000 | 1.0000 | Inconclusive (0 positive support)  |
+| Termination         |  0.50  |  3  |  4  |  2 |  0 |  1 |  4 | 1.0000 | 0.6667 | 0.8000 | 1.0000 | Evaluable (N=3 positives)          |
+| Legal Compliance    |  0.50  |  4  |  3  |  0 |  0 |  4 |  3 | 0.0000 | 0.0000 | 0.0000 | 1.0000 | Evaluable (N=4 positives)          |
+| Liability           |  0.50  |  0  |  7  |  0 |  0 |  0 |  7 | 0.0000 | 0.0000 | 0.0000 | 1.0000 | Inconclusive (0 positive support)  |
+| Payment / Financial |  0.50  |  0  |  7  |  0 |  0 |  0 |  7 | 0.0000 | 0.0000 | 0.0000 | 1.0000 | Inconclusive (0 positive support)  |
++---------------------+--------+-----+-----+----+----+----+----+--------+--------+--------+--------+------------------------------------+
+| Global / Overall    |  0.50  |  7  | 28  |  2 |  0 |  5 | 28 | 1.0000 | 0.2857 | 0.4444 | 1.0000 | 35 binary decisions total          |
++---------------------+--------+-----+-----+----+----+----+----+--------+--------+--------+--------+------------------------------------+
+```
+
+#### Exact Mathematical Derivation of Baseline Metrics & Correction of Previous Transcription Discrepancy
+- **Global Counts across all 35 decisions**:
+  - True Positives (TP) = 2 (Both in `Termination`: `CAN-007` and `CAN-008`)
+  - False Positives (FP) = **0** across all 5 classes
+  - False Negatives (FN) = 5 (1 in `Termination`: `CAN-023`; 4 in `Legal Compliance`: `CAN-030`, `CAN-031`, `CAN-032`, `CAN-033`)
+  - True Negatives (TN) = 28 across all 5 classes
+- **Global Metrics**:
+  - $\text{Micro Precision} = \frac{\text{TP}}{\text{TP} + \text{FP}} = \frac{2}{2 + 0} = \mathbf{1.0000}$ (100.0%)
+  - $\text{Micro Recall} = \frac{\text{TP}}{\text{TP} + \text{FN}} = \frac{2}{2 + 5} = \frac{2}{7} = \mathbf{0.2857}$ (28.57%)
+  - $\text{Micro F1} = 2 \times \frac{\text{Prec} \times \text{Rec}}{\text{Prec} + \text{Rec}} = \frac{2 \times \text{TP}}{2 \times \text{TP} + \text{FP} + \text{FN}} = \frac{4}{4 + 0 + 5} = \frac{4}{9} = \mathbf{0.4444}$
+  - $\text{Macro F1 (All 5 Categories)} = \frac{0.8000 + 0.0 + 0.0 + 0.0 + 0.0}{5} = \mathbf{0.1600}$
+  - $\text{Macro F1 (Evaluable Categories)} = \frac{0.8000 + 0.0}{2} = \mathbf{0.4000}$
+  - $\text{Specificity} = \frac{\text{TN}}{\text{TN} + \text{FP}} = \frac{28}{28 + 0} = \mathbf{1.0000}$ (100.0%)
+  - $\text{Hamming Loss} = \frac{\text{FP} + \text{FN}}{\text{Total}} = \frac{0 + 5}{35} = \frac{5}{35} = \mathbf{0.1429}$
+
+> **Correction Note on Prior Transcription Discrepancy**:
+> An earlier documentation draft inadvertently stated: *"Detected 2 positives in Legal Compliance with 2 false positives but reports micro F1 = 0.4444"*.
+> As shown above by recomputing from the raw machine-generated prediction matrix:
+> 1. The 2 True Positives were in **Termination** (`CAN-007` and `CAN-008`), not Legal Compliance.
+> 2. The baseline had **zero** false positives ($\text{FP} = 0$), not 2 false positives.
+> 3. If there had been 2 false positives, Micro F1 would mathematically have been $\frac{2 \times 2}{2 \times 2 + 2 + 5} = \frac{4}{11} \approx 0.3636$. The machine-reported value of $0.4444$ is the exact decimal expansion of $\frac{4}{9}$, which rigorously proves $\text{FP} = 0$. The prior note was a manual typographic error in describing the confusion counts, now fully corrected.
 
 ### 4.4 Comparison with Prior Model Artifact
 The prior model artifact located in `analysis/models/legal_bert_model/` was trained against dataset snapshot `0048f456...` (pre-freeze v3.0). On the same 7 test records, it likewise produced 0 true positives at threshold 0.50, demonstrating that the small training volume ($N=44$, with 3–5 positives per class) is insufficient for BERT-base to cross the default 0.50 decision boundary without calibrated thresholds.

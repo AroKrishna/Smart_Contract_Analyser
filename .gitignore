@@ -19,6 +19,7 @@ __pycache__/
 htmlcov/
 .venv/
 venv/
+env/
 ENV/
 
 # Large Model Checkpoints & Weights (>100MB, not tracked with Git LFS)
@@ -28,16 +29,26 @@ ENV/
 *.pth
 *.onnx
 
-# Local Database Files
+# Local Database & Storage Data
 *.db
 *.sqlite
 *.sqlite3
+backend/data/
+data/storage/
+stored_files/
+**/stored_files/
+reports/
+**/reports/
+*.pdf
+*.docx
 
 # Environment Variables & Local Secrets
 .env
 .env.local
 .env.*.local
 *.local
+!.env.example
+!**/.env.example
 
 # Logs
 logs/

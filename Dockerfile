@@ -31,6 +31,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application source code, entrypoint, and data assets
 COPY analysis/ ./analysis/
+COPY backend/ ./backend/
 COPY data/ ./data/
 COPY docker-entrypoint.sh ./docker-entrypoint.sh
 RUN chmod +x ./docker-entrypoint.sh

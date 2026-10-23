@@ -16,7 +16,21 @@ if [ ! -f "$WEIGHTS_FILE" ] && [ ! -f "$MODEL_DIR/pytorch_model.bin" ]; then
     if [ -n "$MODEL_WEIGHTS_URL" ]; then
         echo "[SCA-INIT] Downloading model weights from $MODEL_WEIGHTS_URL..."
         curl -f -L -o "$WEIGHTS_FILE" "$MODEL_WEIGHTS_URL"
-        echo "[SCA-INIT] Model weights successfully downloaded."
+        
+        # Verify SHA-256 checksum if provided
+        if [ -n "$EXPECTED_MODEL_SHA256" ]; then
+            echo "[SCA-INIT] Verifying model weights SHA-256 checksum..."
+            ACTUAL_SHA=$(sha256sum "$WEIGHTS_FILE" | awk '{print $1}')
+            if [ "$ACTUAL_SHA" != "$EXPECTED_MODEL_SHA256" ]; then
+                echo "[SCA-INIT] ERROR: Model weights checksum verification failed!"
+                echo "[SCA-INIT] Expected: $EXPECTED_MODEL_SHA256"
+                echo "[SCA-INIT] Received: $ACTUAL_SHA"
+                rm -f "$WEIGHTS_FILE"
+                exit 1
+            fi
+            echo "[SCA-INIT] Checksum verified successfully ($ACTUAL_SHA)."
+        fi
+        echo "[SCA-INIT] Model weights successfully downloaded and verified."
     # Method B: Auto-train from canonical frozen dataset if explicitly requested
     elif [ "$AUTO_TRAIN_ON_STARTUP" = "1" ] || [ "$AUTO_TRAIN_ON_STARTUP" = "true" ]; then
         echo "[SCA-INIT] AUTO_TRAIN_ON_STARTUP is enabled. Training Legal-BERT from canonical dataset..."

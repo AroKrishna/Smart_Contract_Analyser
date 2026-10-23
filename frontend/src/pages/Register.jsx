@@ -1,13 +1,16 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShieldCheck, User, Mail, Lock, Building, ArrowRight } from 'lucide-react';
+import { ShieldCheck, User, Mail, Lock, Building, ArrowRight, AlertCircle } from 'lucide-react';
 import { APP_NAME } from '../utils/constants';
+import { useAuth } from '../context/AuthContext';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
 import Card from '../components/common/Card';
 
 const Register = () => {
   const navigate = useNavigate();
+  const { register } = useAuth();
+
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [organization, setOrganization] = useState('');
@@ -17,9 +20,14 @@ const Register = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMessage('');
+
+    if (password.length < 8) {
+      setErrorMessage('Password must be at least 8 characters long');
+      return;
+    }
 
     if (password !== confirmPassword) {
       setErrorMessage('Passwords do not match');
@@ -33,11 +41,14 @@ const Register = () => {
 
     setIsLoading(true);
 
-    // Mock registration transition
-    setTimeout(() => {
+    try {
+      await register(email.trim(), password, name.trim(), organization.trim());
+      navigate('/dashboard', { replace: true });
+    } catch (err) {
+      setErrorMessage(err.message || 'Registration could not be completed.');
+    } finally {
       setIsLoading(false);
-      navigate('/dashboard');
-    }, 600);
+    }
   };
 
   return (
@@ -62,8 +73,9 @@ const Register = () => {
         {/* Register Card */}
         <Card className="border-slate-800 bg-slate-900/90 shadow-xl">
           {errorMessage && (
-            <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-xs text-red-400">
-              {errorMessage}
+            <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-xs text-red-400 flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{errorMessage}</span>
             </div>
           )}
 

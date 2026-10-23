@@ -54,6 +54,12 @@ const LegalChatAssistant = ({ contractId, contractName = 'Contract' }) => {
         sender: 'assistant',
         text: response.answer,
         category: response.category,
+        isGenerativeAi: Boolean(response.isGenerativeAi),
+        engineLabel: response.engineLabel || (response.isGenerativeAi ? 'Generative AI (External LLM)' : 'Limited Offline Explanation (Deterministic Analysis)'),
+        sourceEvidence: response.sourceEvidence || response.verifiedFindings || [],
+        modelPredictedRisks: response.modelPredictedRisks || [],
+        remediation: response.remediation,
+        disclaimer: response.disclaimer,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
       setMessages((prev) => [...prev, assistantMsg]);
@@ -116,7 +122,7 @@ const LegalChatAssistant = ({ contractId, contractName = 'Contract' }) => {
       </div>
 
       {/* Message History Feed */}
-      <div className="bg-slate-950/70 border border-slate-800/80 rounded-xl p-4 min-h-[260px] max-h-[360px] overflow-y-auto space-y-4 text-xs font-sans">
+      <div className="bg-slate-950/70 border border-slate-800/80 rounded-xl p-4 min-h-[260px] max-h-[420px] overflow-y-auto space-y-4 text-xs font-sans">
         {messages.map((msg) => (
           <div
             key={msg.id}
@@ -135,20 +141,68 @@ const LegalChatAssistant = ({ contractId, contractName = 'Contract' }) => {
             </div>
 
             <div
-              className={`max-w-[85%] rounded-xl p-3.5 space-y-1.5 ${
+              className={`max-w-[85%] rounded-xl p-3.5 space-y-2.5 ${
                 msg.sender === 'user'
                   ? 'bg-blue-600 text-white rounded-tr-none'
                   : 'bg-slate-900/90 border border-slate-800 text-slate-200 rounded-tl-none'
               } ${msg.isError ? 'border-red-500/30 text-red-300 bg-red-950/20' : ''}`}
             >
               <div className="flex items-center justify-between gap-4 text-[10px] opacity-75">
-                <span className="font-semibold">
-                  {msg.sender === 'user' ? 'You' : 'AI Legal Assistant'}
-                  {msg.category && ` • ${msg.category}`}
-                </span>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="font-semibold">
+                    {msg.sender === 'user' ? 'You' : 'AI Legal Assistant'}
+                  </span>
+                  {msg.category && (
+                    <span className="px-1.5 py-0.2 rounded bg-slate-800 text-slate-300 font-mono">
+                      {msg.category}
+                    </span>
+                  )}
+                  {msg.sender === 'assistant' && !msg.isError && (
+                    <span
+                      className={`px-1.5 py-0.2 rounded font-mono text-[9px] border ${
+                        msg.isGenerativeAi
+                          ? 'bg-purple-500/10 border-purple-500/30 text-purple-300'
+                          : 'bg-blue-500/10 border-blue-500/30 text-blue-300'
+                      }`}
+                    >
+                      {msg.engineLabel || (msg.isGenerativeAi ? 'Generative AI' : 'Deterministic Legal KB')}
+                    </span>
+                  )}
+                </div>
                 <span>{msg.timestamp}</span>
               </div>
-              <p className="whitespace-pre-line leading-relaxed">{msg.text}</p>
+
+              {/* Source Evidence & Contract Indicators Section */}
+              {msg.sourceEvidence && msg.sourceEvidence.length > 0 && (
+                <div className="bg-slate-950/80 rounded-lg p-2.5 border border-slate-800 text-[11px] space-y-1">
+                  <div className="text-[10px] font-semibold text-emerald-400 uppercase tracking-wider flex items-center gap-1">
+                    <ShieldCheck className="w-3 h-3" /> Source Evidence & Contract Indicators ({msg.sourceEvidence.length})
+                  </div>
+                  {msg.sourceEvidence.map((f, i) => (
+                    <div key={i} className="text-slate-300">
+                      • <span className="font-semibold text-slate-200">[{f.category || 'Observation'}]</span>: {f.description} {f.lineStart ? `(Lines ${f.lineStart}-${f.lineEnd})` : ''}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Assistant-Generated Explanation */}
+              <div className="space-y-1">
+                {msg.sender === 'assistant' && !msg.isError && (
+                  <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+                    {msg.isGenerativeAi ? '🤖 Generative AI Explanation (External LLM)' : '📋 Assistant-Generated Explanation (Limited Offline)'}
+                  </div>
+                )}
+                <p className="whitespace-pre-line leading-relaxed">{msg.text}</p>
+              </div>
+
+              {/* Remediation Block */}
+              {msg.remediation && (
+                <div className="bg-blue-950/40 rounded-lg p-2.5 border border-blue-500/25 text-[11px] text-blue-200">
+                  <span className="font-semibold text-blue-300">💡 Remediation: </span>
+                  {msg.remediation}
+                </div>
+              )}
             </div>
           </div>
         ))}

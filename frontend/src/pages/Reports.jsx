@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   FileText,
@@ -12,14 +12,55 @@ import Card from '../components/common/Card';
 import Badge from '../components/common/Badge';
 import Input from '../components/common/Input';
 import Button from '../components/common/Button';
+import EmptyState from '../components/common/EmptyState';
 import { mockReports } from '../data/mockData';
+import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 
 const Reports = () => {
+  const { isAuthenticated } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [downloadingId, setDownloadingId] = useState(null);
+  const [liveReports, setLiveReports] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  const filteredReports = mockReports.filter((rep) =>
+  useEffect(() => {
+    let isCancelled = false;
+    async function loadReports() {
+      if (!isAuthenticated) {
+        setLiveReports([]);
+        return;
+      }
+      setLoading(true);
+      try {
+        const data = await api.listHistory();
+        if (!isCancelled && data?.analyses) {
+          const mapped = data.analyses.map((a) => ({
+            id: a.id || a.analysisId,
+            contractId: a.id || a.analysisId,
+            contractName: a.contractName || a.name || 'Contract.sol',
+            contractType: a.contractType || 'Solidity Smart Contract',
+            riskScore: a.overallRiskScore ?? a.riskScore ?? 0,
+            riskLevel: a.overallRiskLevel || a.riskLevel || 'Low',
+            generatedDate: a.auditDate || a.created_at || 'Recent',
+          }));
+          setLiveReports(mapped);
+        }
+      } catch (err) {
+        console.warn('Failed to load user reports:', err);
+      } finally {
+        if (!isCancelled) setLoading(false);
+      }
+    }
+
+    loadReports();
+    return () => {
+      isCancelled = true;
+    };
+  }, [isAuthenticated]);
+
+  const sourceReports = isAuthenticated ? liveReports : mockReports;
+  const filteredReports = sourceReports.filter((rep) =>
     rep.contractName.toLowerCase().includes(searchQuery.toLowerCase()) ||
     rep.contractType.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -30,8 +71,8 @@ const Reports = () => {
     try {
       await api.downloadReport(auditId, format, report.contractName);
     } catch (err) {
-      console.warn('Real report download failed, using fallback notice:', err);
-      alert(`Structured Audit Report for "${report.contractName}" prepared in ${format} format.`);
+      console.warn('Report download error:', err);
+      alert(`Report download failed: ${err.message}`);
     } finally {
       setDownloadingId(null);
     }
@@ -61,88 +102,103 @@ const Reports = () => {
       </div>
 
       {/* Reports Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {filteredReports.map((report) => (
-          <Card
-            key={report.id}
-            className="border-slate-800 bg-slate-900/60 p-5 flex flex-col justify-between hover:border-slate-700 transition-colors"
-          >
-            <div>
-              <div className="flex items-start justify-between gap-3 mb-3">
-                <div className="flex items-center gap-2.5">
-                  <div className="p-2 rounded-lg bg-blue-600/10 border border-blue-500/20 text-blue-400">
-                    <FileText className="w-5 h-5" />
+      {filteredReports.length === 0 ? (
+        <Card className="border-slate-800 bg-slate-900/60 p-8">
+          <EmptyState
+            title="No Reports Available"
+            description={
+              isAuthenticated
+                ? "You have not submitted any smart contracts for audit yet. Initiate a new analysis to generate downloadable PDF and DOCX reports."
+                : "No reports match your search criteria."
+            }
+            actionLabel="Start New Analysis"
+            actionLink="/analysis/new"
+          />
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {filteredReports.map((report) => (
+            <Card
+              key={report.id}
+              className="border-slate-800 bg-slate-900/60 p-5 flex flex-col justify-between hover:border-slate-700 transition-colors"
+            >
+              <div>
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-2 rounded-lg bg-blue-600/10 border border-blue-500/20 text-blue-400">
+                      <FileText className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-100">
+                        {report.contractName}
+                      </h3>
+                      <p className="text-xs text-slate-400">
+                        {report.contractType}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-slate-100">
-                      {report.contractName}
-                    </h3>
-                    <p className="text-xs text-slate-400">
-                      {report.contractType}
-                    </p>
+
+                  <Badge riskLevel={report.riskLevel} size="sm" dot />
+                </div>
+
+                <div className="bg-slate-950/60 rounded-lg p-3 border border-slate-800/80 mb-4 space-y-1.5 text-xs">
+                  <div className="flex justify-between text-slate-400">
+                    <span>Risk Score:</span>
+                    <span className="font-mono text-slate-200 font-semibold">
+                      {report.riskScore}/100
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-slate-400">
+                    <span>Audited Date:</span>
+                    <span className="font-mono text-slate-300 flex items-center gap-1">
+                      <Calendar className="w-3 h-3 text-slate-400" />
+                      {report.generatedDate}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-slate-400">
+                    <span>Report Sections:</span>
+                    <span className="text-slate-300">
+                      Exec Summary, Risk Matrix, SHAP/LIME, Recommendations
+                    </span>
                   </div>
                 </div>
-
-                <Badge riskLevel={report.riskLevel} size="sm" dot />
               </div>
 
-              <div className="bg-slate-950/60 rounded-lg p-3 border border-slate-800/80 mb-4 space-y-1.5 text-xs">
-                <div className="flex justify-between text-slate-400">
-                  <span>Risk Score:</span>
-                  <span className="font-mono text-slate-200 font-semibold">
-                    {report.riskScore}/100
-                  </span>
-                </div>
-                <div className="flex justify-between text-slate-400">
-                  <span>Audited Date:</span>
-                  <span className="font-mono text-slate-300 flex items-center gap-1">
-                    <Calendar className="w-3 h-3 text-slate-400" />
-                    {report.generatedDate}
-                  </span>
-                </div>
-                <div className="flex justify-between text-slate-400">
-                  <span>Report Sections:</span>
-                  <span className="text-slate-300">
-                    Exec Summary, Risk Matrix, SHAP/LIME, Recommendations
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Actions Bar */}
-            <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between gap-2">
-              <Link
-                to={`/analysis/${report.contractId}`}
-                className="text-xs text-blue-400 hover:text-blue-300 font-medium flex items-center gap-1"
-              >
-                <span>View Online</span>
-                <ExternalLink className="w-3 h-3" />
-              </Link>
-
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  icon={Download}
-                  isLoading={downloadingId === `${report.id}-PDF`}
-                  onClick={() => handleDownload(report, 'PDF')}
+              {/* Actions Bar */}
+              <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between gap-2">
+                <Link
+                  to={`/analysis/${report.contractId}`}
+                  className="text-xs text-blue-400 hover:text-blue-300 font-medium flex items-center gap-1"
                 >
-                  PDF
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  icon={Download}
-                  isLoading={downloadingId === `${report.id}-DOCX`}
-                  onClick={() => handleDownload(report, 'DOCX')}
-                >
-                  DOCX
-                </Button>
+                  <span>View Online</span>
+                  <ExternalLink className="w-3 h-3" />
+                </Link>
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    icon={Download}
+                    isLoading={downloadingId === `${report.id}-PDF`}
+                    onClick={() => handleDownload(report, 'PDF')}
+                  >
+                    PDF
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    icon={Download}
+                    isLoading={downloadingId === `${report.id}-DOCX`}
+                    onClick={() => handleDownload(report, 'DOCX')}
+                  >
+                    DOCX
+                  </Button>
+                </div>
               </div>
-            </div>
-          </Card>
-        ))}
-      </div>
+            </Card>
+          ))}
+        </div>
+      )}
 
       {/* Report Structure Notice */}
       <div className="p-4 rounded-xl bg-slate-900/40 border border-slate-800/80 text-xs text-slate-400 flex items-start gap-3">
