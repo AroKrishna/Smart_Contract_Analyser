@@ -138,8 +138,8 @@ See [docs/CURRENT_STATE_AND_GAPS.md](docs/CURRENT_STATE_AND_GAPS.md) for the com
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/AroKrishna/XAI-Contract_Analyser.git
-cd XAI-Contract_Analyser
+git clone https://github.com/AroKrishna/Smart_Contract_Analyser_Private.git
+cd Smart_Contract_Analyser_Private
 ```
 
 ### 2. Configure Environment Variables
@@ -154,23 +154,75 @@ Key variables configured in `.env` (or in your hosting provider's dashboard):
 - `ANALYSIS_TTL_MINUTES`: Ephemeral in-memory analysis retention TTL (default: `30`).
 - `MAX_STORED_ANALYSES`: Maximum in-memory FIFO analyses cache (default: `100`).
 - `VITE_API_BASE_URL`: (Frontend only) Target API domain if the frontend is hosted separately from the backend (leave blank when using relative `/api` paths with the local proxy or Nginx).
+- `MODEL_WEIGHTS_URL`: Optional direct HTTPS URL to automatically download the Legal-BERT weights if absent.
+- `EXPECTED_MODEL_SHA256`: Optional expected SHA-256 hash for verifying model weights on automated download (`4c5d1c1caf6f42e38173d6fc1b69a924cf2ad93e0188e0f5bb057ac0b73d972e`).
 
 ### 3. Legal-BERT Model Checkpoint Setup
 The active Phase 1 engine expects the fine-tuned Legal-BERT checkpoint at:
-`analysis/models/legal_bert_v3.3.0/model.safetensors` (~438 MB).
+`analysis/models/legal_bert_v3.3.0/model.safetensors` (or `backend/analysis/models/legal_bert_v3.3.0/model.safetensors`, ~438 MB).
 
 > [!NOTE]
-> Because ordinary GitHub repositories reject files exceeding 100 MiB and Git LFS is omitted to prevent bandwidth quotas and billing issues, the binary model weight file is excluded from git via `.gitignore`. The model architecture config, tokenizer definitions, and training metrics are tracked in the repository.
+> Because ordinary GitHub repositories reject files exceeding 100 MiB and Git LFS is omitted to prevent bandwidth quotas and billing issues, the binary model weight file is excluded from Git via `.gitignore`. The model architecture config, tokenizer definitions, and training metrics are tracked in the repository.
 
-To obtain or train the model weights:
-- **Option A (Train locally from canonical dataset)**:
-  ```bash
-  python -m analysis.train_legal_bert
-  ```
-  This trains the multi-label model on `data/ml_candidates/final_dataset.jsonl` and saves the weights to `analysis/models/legal_bert_v3.3.0/model.safetensors`.
-- **Option B (Manual Checkpoint Placement)**:
-  Place the pre-trained `model.safetensors` directly into `analysis/models/legal_bert_v3.3.0/`.
-- If the checkpoint is missing, the backend will return a transparent `HTTP 503` readiness status at `/ready` explaining that the checkpoint is absent, rather than generating misleading mock predictions.
+#### Option A: Download Pre-Trained Weights from Release (Recommended)
+You can directly download the official release asset for version `v3.3.0`:
+
+- **Release Asset URL**:
+  `https://github.com/AroKrishna/Smart_Contract_Analyser/releases/download/v3.3.0/model.safetensors`
+- **Expected SHA-256 Checksum**:
+  `4c5d1c1caf6f42e38173d6fc1b69a924cf2ad93e0188e0f5bb057ac0b73d972e`
+
+**Windows (PowerShell):**
+```powershell
+# Create destination directory if needed
+New-Item -ItemType Directory -Force -Path "analysis\models\legal_bert_v3.3.0"
+
+# Download model checkpoint weights (~438 MB)
+curl.exe -L -o "analysis\models\legal_bert_v3.3.0\model.safetensors" "https://github.com/AroKrishna/Smart_Contract_Analyser/releases/download/v3.3.0/model.safetensors"
+
+# Verify SHA-256 checksum
+(Get-FileHash -Algorithm SHA256 "analysis\models\legal_bert_v3.3.0\model.safetensors").Hash
+# Must output: 4C5D1C1CAF6F42E38173D6FC1B69A924CF2AD93E0188E0F5BB057AC0B73D972E
+```
+
+**Linux / macOS (Bash):**
+```bash
+# Create destination directory if needed
+mkdir -p analysis/models/legal_bert_v3.3.0
+
+# Download model checkpoint weights (~438 MB)
+curl -L -o analysis/models/legal_bert_v3.3.0/model.safetensors "https://github.com/AroKrishna/Smart_Contract_Analyser/releases/download/v3.3.0/model.safetensors"
+
+# Verify SHA-256 checksum
+# Linux:
+sha256sum analysis/models/legal_bert_v3.3.0/model.safetensors
+# macOS:
+shasum -a 256 analysis/models/legal_bert_v3.3.0/model.safetensors
+# Expected: 4c5d1c1caf6f42e38173d6fc1b69a924cf2ad93e0188e0f5bb057ac0b73d972e
+```
+
+*(Note: You may also place a copy into `backend/analysis/models/legal_bert_v3.3.0/model.safetensors`; the backend checks both paths).*
+
+#### Option B: Automated Runtime Acquisition via Environment Variables
+Alternatively, configure your `.env` with:
+```bash
+MODEL_WEIGHTS_URL=https://github.com/AroKrishna/Smart_Contract_Analyser/releases/download/v3.3.0/model.safetensors
+EXPECTED_MODEL_SHA256=4c5d1c1caf6f42e38173d6fc1b69a924cf2ad93e0188e0f5bb057ac0b73d972e
+```
+On boot or first request, the backend engine will download the weights into ephemeral cache and validate the checksum automatically.
+
+#### Option C: Train Locally from Canonical Dataset
+```bash
+python -m analysis.train_legal_bert
+```
+This trains the multi-label model on `data/ml_candidates/final_dataset.jsonl` and saves the weights to `analysis/models/legal_bert_v3.3.0/model.safetensors`.
+
+#### Model Readiness Verification
+If the checkpoint is missing or corrupted, the backend will return a transparent `HTTP 503` readiness status at `/ready` explaining that the checkpoint is absent, rather than generating misleading mock predictions. Once downloaded:
+```bash
+curl http://127.0.0.1:8000/ready
+# Returns: {"status":"ready","checkpointName":"legal_bert_v3.3.0", ...}
+```
 
 ### 4. Start the FastAPI Backend Service
 ```bash

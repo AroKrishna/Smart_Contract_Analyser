@@ -139,13 +139,14 @@ def resolve_default_model_dir() -> Tuple[str, str]:
     base = os.path.dirname(os.path.abspath(__file__))
     v3_path = os.path.join(base, "models", "legal_bert_v3.3.0")
 
-    # 1. Check local v3.3.0 path
-    has_v3_weights = os.path.exists(v3_path) and (
-        os.path.exists(os.path.join(v3_path, "model.safetensors")) or
-        os.path.exists(os.path.join(v3_path, "pytorch_model.bin"))
-    )
-    if has_v3_weights:
-        return v3_path, "legal_bert_v3.3.0"
+    # 1. Check local v3.3.0 path (backend or root repository path)
+    root_v3_path = os.path.abspath(os.path.join(base, "..", "..", "analysis", "models", "legal_bert_v3.3.0"))
+    for candidate_v3 in [v3_path, root_v3_path]:
+        if os.path.exists(candidate_v3) and (
+            os.path.exists(os.path.join(candidate_v3, "model.safetensors")) or
+            os.path.exists(os.path.join(candidate_v3, "pytorch_model.bin"))
+        ):
+            return candidate_v3, "legal_bert_v3.3.0"
 
     # 2. Check ephemeral temp directory (/tmp/legal_bert_v3.3.0)
     tmp_v3_path = os.path.join(tempfile.gettempdir(), "legal_bert_v3.3.0")
