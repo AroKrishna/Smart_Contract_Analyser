@@ -1,4 +1,4 @@
-import { RISK_LEVEL_CONFIG } from '../../utils/constants';
+import SeverityTag from './SeverityTag';
 
 const Badge = ({
   children,
@@ -8,35 +8,38 @@ const Badge = ({
   dot = false,
   className = '',
 }) => {
+  if (riskLevel) {
+    return (
+      <SeverityTag
+        severity={riskLevel}
+        size={size === 'lg' ? 'lg' : size === 'sm' ? 'sm' : 'default'}
+        className={className}
+      />
+    );
+  }
+
   const sizes = {
-    sm: 'text-xs px-2 py-0.5 gap-1',
-    md: 'text-xs px-2.5 py-1 gap-1.5',
-    lg: 'text-sm px-3 py-1.5 gap-2',
+    sm: 'text-[11px] px-1.5 py-0.5 gap-1',
+    md: 'text-xs px-2 py-0.5 gap-1.5',
+    lg: 'text-xs px-2.5 py-1 gap-2',
   };
 
   const variants = {
-    default: 'bg-slate-800 text-slate-300 border-slate-700',
-    info: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
-    success: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-    warning: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-    danger: 'bg-red-500/10 text-red-400 border-red-500/20',
+    default: 'bg-[var(--surface-subtle)] text-[var(--text-secondary)] border-[var(--border)]',
+    info: 'bg-[var(--accent-tint)] text-[var(--accent)] border-[var(--accent)]/30',
+    success: 'bg-[var(--low-tint)] text-[var(--low)] border-[var(--low)]/40',
+    warning: 'bg-[var(--high-tint)] text-[var(--high)] border-[var(--high)]/40',
+    danger: 'bg-[var(--critical-tint)] text-[var(--critical)] border-[var(--critical)]/40',
   };
 
-  let badgeStyle = variants[variant] || variants.default;
-  let dotColor = 'bg-slate-400';
-
-  if (riskLevel && RISK_LEVEL_CONFIG[riskLevel]) {
-    const config = RISK_LEVEL_CONFIG[riskLevel];
-    badgeStyle = config.badgeClass;
-    dotColor = config.dotClass;
-  }
+  const currentVariant = variants[variant] || variants.default;
 
   return (
     <span
-      className={`inline-flex items-center font-medium rounded-full border ${badgeStyle} ${sizes[size] || sizes.md} ${className}`}
+      className={`inline-flex items-center font-medium rounded-[3px] border ${currentVariant} ${sizes[size] || sizes.md} ${className}`}
     >
-      {dot && <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />}
-      {children || (riskLevel ? RISK_LEVEL_CONFIG[riskLevel]?.label || riskLevel : null)}
+      {dot && <span className="w-1.5 h-1.5 rounded-full bg-current" />}
+      {children}
     </span>
   );
 };

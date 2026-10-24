@@ -1,15 +1,159 @@
 @import "tailwindcss";
 
+/* ==========================================================================
+   Design Guide Tokens - Smart Contract Analyser Professional Redline Design
+   ========================================================================== */
+
+:root {
+  /* Light palette (Default) */
+  --canvas: #F3F4F6;
+  --surface: #FFFFFF;
+  --surface-subtle: #F7F8FA;
+  --surface-raised: #FFFFFF;
+  --border: #D5DAE1;
+  --border-strong: #8A93A0;
+  --text-main: #14181F;
+  --text-secondary: #4A5260;
+  --text-muted: #5F6775;
+  --accent: #1D4ED8;
+  --accent-hover: #1E40AF;
+  --accent-fill: #1D4ED8;
+  --accent-tint: #E8EEFC;
+  --critical: #A61B1B;
+  --critical-tint: #FBE9E8;
+  --high: #B85C00;
+  --high-tint: #FCEFDF;
+  --medium: #8A6D00;
+  --medium-tint: #F8F0D2;
+  --low: #2C6E49;
+  --low-tint: #E4F1EA;
+  --chart-raises: #B54708;
+  --chart-lowers: #0F6E7A;
+  --code-bg: #FFFFFF;
+  --code-gutter: #F7F8FA;
+  --focus-ring: #1D4ED8;
+}
+
+[data-theme="dark"],
+.dark {
+  /* Dark palette */
+  --canvas: #0F1217;
+  --surface: #171B22;
+  --surface-raised: #1E232B;
+  --surface-subtle: #141820;
+  --border: #2D343E;
+  --border-strong: #6B7585;
+  --text-main: #E8EBF0;
+  --text-secondary: #AEB6C2;
+  --text-muted: #8F98A6;
+  --accent: #7AA2FF;
+  --accent-hover: #96B7FF;
+  --accent-fill: #3A6BDB;
+  --accent-tint: #1B2A4A;
+  --critical: #FF8A80;
+  --critical-tint: #3A1A1A;
+  --high: #FFB066;
+  --high-tint: #3A2512;
+  --medium: #E8C547;
+  --medium-tint: #35300F;
+  --low: #6FCF97;
+  --low-tint: #14301F;
+  --chart-raises: #F59E5B;
+  --chart-lowers: #5CC4D1;
+  --code-bg: #12161C;
+  --code-gutter: #141820;
+  --focus-ring: #7AA2FF;
+}
+
 @layer base {
+  * {
+    border-color: var(--border);
+  }
+
   body {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background-color: var(--canvas);
+    color: var(--text-main);
+    font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     margin: 0;
     padding: 0;
     min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
-  code, pre {
-    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  code, pre, kbd, samp {
+    font-family: 'IBM Plex Mono', 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+    font-feature-settings: 'tnum';
+    font-variant-numeric: tabular-nums;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--text-main);
+    font-weight: 600;
   }
 }
 
+/* Tabular figures for numbers, line numbers, SHAP values, scores */
+.tnum {
+  font-feature-settings: 'tnum';
+  font-variant-numeric: tabular-nums;
+}
+
+/* Accessibility: focus ring (2px solid accent with 2px offset) */
+.focus-ring {
+  outline: none;
+}
+.focus-ring:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Skip link */
+.skip-to-main-link {
+  position: absolute;
+  top: -9999px;
+  left: 16px;
+  background-color: var(--accent);
+  color: #FFFFFF;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  z-index: 100;
+  text-decoration: none;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+.skip-to-main-link:focus {
+  top: 12px;
+  outline: 2px solid var(--text-main);
+  outline-offset: 2px;
+}
+
+/* Underline tab style */
+.nav-tab-underlined {
+  position: relative;
+  border-bottom: 2px solid transparent;
+  padding-bottom: 10px;
+  font-size: 14px;
+  color: var(--text-secondary);
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+.nav-tab-underlined:hover {
+  color: var(--text-main);
+}
+.nav-tab-underlined[data-active="true"],
+.nav-tab-underlined.active {
+  color: var(--text-main);
+  font-weight: 600;
+  border-bottom-color: var(--accent);
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

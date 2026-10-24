@@ -2,10 +2,11 @@ import { Loader2 } from 'lucide-react';
 
 const Button = ({
   children,
-  variant = 'primary',
-  size = 'md',
+  variant = 'primary', // 'primary' | 'secondary' | 'tertiary' | 'destructive' | 'destructive-confirmed' | 'outline' | 'ghost'
+  size = 'md', // 'sm' (28px) | 'md' (36px) | 'lg' (44px)
   isLoading = false,
   disabled = false,
+  disabledReason = '',
   icon: Icon,
   iconPosition = 'left',
   className = '',
@@ -13,50 +14,60 @@ const Button = ({
   onClick,
   ...props
 }) => {
-  const baseStyles =
-    'inline-flex items-center justify-center font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2 focus:ring-offset-slate-950 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer rounded-lg';
+  // Heights and paddings as specified in Section 4 of Design Guide:
+  // sm: 28px height, 12px horizontal padding
+  // md: 36px height, 16px horizontal padding
+  // lg: 44px height, 20px horizontal padding
+  const sizeStyles = {
+    sm: 'h-[28px] px-3 text-xs gap-2',
+    md: 'h-[36px] px-4 text-[14px] gap-2',
+    lg: 'h-[44px] px-5 text-[15px] gap-2.5',
+  };
 
-  const variants = {
+  // Button styles strictly mapped to Design Guide tokens:
+  const variantStyles = {
     primary:
-      'bg-blue-600 hover:bg-blue-500 text-white shadow-sm shadow-blue-600/25 active:bg-blue-700 border border-blue-500/30',
+      'bg-[var(--accent-fill)] text-white hover:bg-[var(--accent-hover)] active:brightness-95 border-0 shadow-xs disabled:bg-[var(--surface-subtle)] disabled:text-[var(--text-muted)] disabled:border disabled:border-[var(--border)]',
     secondary:
-      'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 active:bg-slate-850',
+      'bg-[var(--surface)] text-[var(--text-main)] border border-[var(--border-strong)] hover:bg-[var(--surface-subtle)] active:bg-[var(--surface-subtle)] disabled:text-[var(--text-muted)] disabled:border-[var(--border)]',
+    tertiary:
+      'bg-transparent text-[var(--accent)] hover:bg-[var(--accent-tint)] hover:underline border-0 disabled:text-[var(--text-muted)] disabled:no-underline',
     outline:
-      'bg-transparent hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 active:bg-slate-750',
+      'bg-[var(--surface)] text-[var(--text-main)] border border-[var(--border)] hover:bg-[var(--surface-subtle)] active:bg-[var(--surface-subtle)] disabled:text-[var(--text-muted)]',
     ghost:
-      'bg-transparent hover:bg-slate-800/80 text-slate-400 hover:text-slate-200 active:bg-slate-800',
-    danger:
-      'bg-red-600 hover:bg-red-500 text-white shadow-sm shadow-red-600/25 border border-red-500/30',
+      'bg-transparent text-[var(--text-secondary)] hover:text-[var(--text-main)] hover:bg-[var(--surface-subtle)] border-0 disabled:text-[var(--text-muted)]',
+    destructive:
+      'bg-[var(--surface)] text-[var(--critical)] border border-[var(--critical)] hover:bg-[var(--critical-tint)] active:brightness-95 disabled:text-[var(--text-muted)] disabled:border-[var(--border)]',
+    'destructive-confirmed':
+      'bg-[var(--critical)] text-white hover:brightness-90 active:brightness-75 border-0 disabled:opacity-50',
   };
 
-  const sizes = {
-    sm: 'text-xs px-3 py-1.5 gap-1.5',
-    md: 'text-sm px-4 py-2 gap-2',
-    lg: 'text-base px-5 py-2.5 gap-2.5',
-  };
+  const currentSize = sizeStyles[size] || sizeStyles.md;
+  const currentVariant = variantStyles[variant] || variantStyles.primary;
 
-  const currentVariant = variants[variant] || variants.primary;
-  const currentSize = sizes[size] || sizes.md;
-
-  return (
+  const buttonElement = (
     <button
       type={type}
       disabled={disabled || isLoading}
       onClick={onClick}
-      className={`${baseStyles} ${currentVariant} ${currentSize} ${className}`}
+      aria-disabled={disabled || isLoading}
+      title={disabled && disabledReason ? disabledReason : undefined}
+      className={`inline-flex items-center justify-center font-medium rounded-[4px] cursor-pointer transition-colors focus-ring select-none disabled:cursor-not-allowed ${currentSize} ${currentVariant} ${className}`}
       {...props}
     >
       {isLoading ? (
-        <Loader2 className="w-4 h-4 animate-spin text-current" />
+        <Loader2 className="w-4 h-4 animate-spin text-current shrink-0" aria-hidden="true" />
       ) : (
-        Icon && iconPosition === 'left' && <Icon className="w-4 h-4 shrink-0" />
+        Icon && iconPosition === 'left' && <Icon className="w-4 h-4 shrink-0" aria-hidden="true" />
       )}
-      {children}
+      <span>{children}</span>
       {!isLoading && Icon && iconPosition === 'right' && (
-        <Icon className="w-4 h-4 shrink-0" />
+        <Icon className="w-4 h-4 shrink-0" aria-hidden="true" />
       )}
     </button>
   );
+
+  return buttonElement;
 };
 
 export default Button;

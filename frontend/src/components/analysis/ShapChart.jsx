@@ -1,90 +1,188 @@
+import { useState } from 'react';
 import Card from '../common/Card';
-import { ArrowUpRight, ArrowDownRight, Layers } from 'lucide-react';
+import Button from '../common/Button';
 
-const ShapChart = ({ explanations = [] }) => {
+const ShapChart = ({ explanations = [], onJumpToLine = null }) => {
+  const [showTable, setShowTable] = useState(false);
+  const [showAll, setShowAll] = useState(false);
+
+  // Normalize data items
+  const items = explanations.map((e) => {
+    const rawVal = e.contribution ?? e.value ?? 0;
+    const absVal = Math.abs(rawVal);
+    const tokenName = e.token || e.feature || 'Token';
+    const categoryName = e.category || 'General';
+    const isRaisesRisk = e.impact ? e.impact === 'positive' : rawVal >= 0;
+    const lineNum = e.line || (typeof e.token === 'string' && e.token.match(/line\s*(\d+)/i) ? parseInt(RegExp.$1, 10) : null);
+
+    return {
+      token: tokenName,
+      category: categoryName,
+      val: rawVal,
+      absVal,
+      isRaisesRisk,
+      lineNum,
+    };
+  });
+
+  // Sort by absolute contribution descending
+  const sortedItems = [...items].sort((a, b) => b.absVal - a.absVal);
+  const displayedItems = showAll ? sortedItems : sortedItems.slice(0, 6);
+
   const maxVal = Math.max(
-    ...explanations.map((e) => Math.abs(e.contribution ?? e.value ?? 0.001)),
+    ...sortedItems.map((item) => item.absVal),
     0.01
   );
 
   return (
     <Card
-      title="SHAP Feature Attribution (Shapley Values)"
-      subtitle="Game-theoretic Shapley Additive exPlanations (shap.Explainer) measuring token marginal risk contributions"
-      className="border-slate-800 bg-slate-900/60"
+      title="SHAP contributions"
+      subtitle="How strongly each part of the code pushed the risk score up or down (Shapley values)"
+      action={
+        <Button
+          variant="tertiary"
+          size="sm"
+          onClick={() => setShowTable((prev) => !prev)}
+        >
+          {showTable ? 'View as chart' : 'View as table'}
+        </Button>
+      }
     >
-      <div className="space-y-4">
-        <p className="text-xs text-slate-400 leading-relaxed">
-          Tokens with <span className="text-orange-400 font-semibold">positive Shapley value (+)</span> pushed Legal-BERT toward a higher predicted hazard in the primary category. Tokens with <span className="text-emerald-400 font-semibold">negative Shapley value (-)</span> reduced the predicted hazard.
-        </p>
-
-        <div className="space-y-3 pt-2">
-          {explanations.length === 0 ? (
-            <div className="p-4 rounded-lg bg-slate-950/40 border border-slate-800 text-center text-xs text-slate-500">
-              No significant SHAP token attributions computed for this contract scope.
+      <div className="space-y-4 text-[13px]">
+        {/* Table View Alternative */}
+        {showTable ? (
+          <div className="overflow-x-auto border border-[var(--border)] rounded-[4px]">
+            <table className="w-full text-left text-[12px] font-mono tnum">
+              <thead>
+                <tr className="border-b border-[var(--border)] bg-[var(--surface-subtle)] text-[var(--text-muted)]">
+                  <th className="p-2.5">Feature / Token</th>
+                  <th className="p-2.5">Category</th>
+                  <th className="p-2.5">Direction</th>
+                  <th className="p-2.5 text-right">Shapley Value</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--border)]">
+                {sortedItems.map((item, idx) => (
+                  <tr key={idx} className="hover:bg-[var(--surface-subtle)]">
+                    <td className="p-2.5 font-medium text-[var(--text-main)]">
+                      {item.token}
+                    </td>
+                    <td className="p-2.5 text-[var(--text-secondary)]">
+                      {item.category}
+                    </td>
+                    <td className="p-2.5">
+                      <span
+                        className="font-semibold text-[11px]"
+                        style={{
+                          color: item.isRaisesRisk ? 'var(--chart-raises)' : 'var(--chart-lowers)',
+                        }}
+                      >
+                        {item.isRaisesRisk ? 'Raises risk' : 'Lowers risk'}
+                      </span>
+                    </td>
+                    <td className="p-2.5 text-right font-mono font-semibold text-[var(--text-main)]">
+                      {item.val >= 0 ? `+${item.val.toFixed(4)}` : item.val.toFixed(4)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          /* Horizontal Bars Around Center Axis */
+          <div className="space-y-3">
+            {/* Axis Labels */}
+            <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)] border-b border-[var(--border)] pb-2 select-none">
+              <span className="flex items-center gap-1.5" style={{ color: 'var(--chart-lowers)' }}>
+                ← Lowers risk
+              </span>
+              <span className="flex items-center gap-1.5" style={{ color: 'var(--chart-raises)' }}>
+                Raises risk →
+              </span>
             </div>
-          ) : (
-            explanations.map((item, idx) => {
-              const tokenName = item.token || item.feature || 'Token';
-              const categoryName = item.category || 'Primary Category';
-              const rawVal = item.contribution ?? item.value ?? 0;
-              const absVal = Math.abs(rawVal);
-              const isPositive = item.impact ? item.impact === 'positive' : rawVal >= 0;
-              const barWidthPercent = Math.min(100, Math.max(12, Math.round((absVal / maxVal) * 100)));
 
-              return (
-                <div
-                  key={idx}
-                  className="p-3 rounded-lg bg-slate-950/60 border border-slate-800/80 space-y-2 hover:border-slate-700 transition-colors"
+            {displayedItems.length === 0 ? (
+              <div className="p-4 text-center text-xs text-[var(--text-muted)]">
+                No significant SHAP token attributions calculated.
+              </div>
+            ) : (
+              displayedItems.map((item, idx) => {
+                const widthPercent = Math.min(100, Math.round((item.absVal / maxVal) * 100));
+
+                return (
+                  <div key={idx} className="space-y-1">
+                    <div className="flex items-center justify-between text-[12px]">
+                      <div className="flex items-center gap-2 truncate">
+                        <span className="font-mono font-medium text-[var(--text-main)] truncate">
+                          {item.token}
+                        </span>
+                        <span className="text-[11px] text-[var(--text-muted)] hidden sm:inline">
+                          [{item.category}]
+                        </span>
+                      </div>
+                      <span
+                        className="font-mono text-xs font-semibold tnum shrink-0 ml-2"
+                        style={{
+                          color: item.isRaisesRisk ? 'var(--chart-raises)' : 'var(--chart-lowers)',
+                        }}
+                      >
+                        {item.val >= 0 ? `+${item.val.toFixed(4)}` : item.val.toFixed(4)}
+                      </span>
+                    </div>
+
+                    {/* Dual-direction centered axis bar */}
+                    <div className="relative h-2 w-full bg-[var(--surface-subtle)] rounded-[2px] overflow-hidden flex border border-[var(--border)]">
+                      {/* Center guideline */}
+                      <div className="absolute inset-y-0 left-1/2 w-px bg-[var(--border-strong)] z-10" />
+
+                      {/* Left side (Lowers risk) */}
+                      <div className="w-1/2 flex justify-end">
+                        {!item.isRaisesRisk && (
+                          <div
+                            className="h-full rounded-l-[2px]"
+                            style={{
+                              width: `${widthPercent}%`,
+                              backgroundColor: 'var(--chart-lowers)',
+                            }}
+                          />
+                        )}
+                      </div>
+
+                      {/* Right side (Raises risk) */}
+                      <div className="w-1/2 flex justify-start">
+                        {item.isRaisesRisk && (
+                          <div
+                            className="h-full rounded-r-[2px]"
+                            style={{
+                              width: `${widthPercent}%`,
+                              backgroundColor: 'var(--chart-raises)',
+                            }}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+
+            {sortedItems.length > 6 && (
+              <div className="pt-2">
+                <Button
+                  variant="tertiary"
+                  size="sm"
+                  onClick={() => setShowAll((prev) => !prev)}
                 >
-                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-xs px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-200">
-                        {tokenName}
-                      </span>
-                      <span className="text-[10px] text-slate-400 font-medium">
-                        [{categoryName}]
-                      </span>
-                    </div>
+                  {showAll ? 'Show top 6 only' : `Show all ${sortedItems.length} tokens`}
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
 
-                    <div className="flex items-center gap-1.5 font-mono text-xs">
-                      {isPositive ? (
-                        <span className="flex items-center gap-1 text-orange-400 font-semibold">
-                          <ArrowUpRight className="w-3.5 h-3.5" />
-                          +{absVal.toFixed(4)} (Hazard Driver)
-                        </span>
-                      ) : (
-                        <span className="flex items-center gap-1 text-emerald-400 font-semibold">
-                          <ArrowDownRight className="w-3.5 h-3.5" />
-                          -{absVal.toFixed(4)} (Mitigating)
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Contribution Bar */}
-                  <div className="h-2 w-full bg-slate-900 rounded-full overflow-hidden flex">
-                    <div
-                      className={`h-full rounded-full transition-all duration-500 ${
-                        isPositive ? 'bg-orange-500' : 'bg-emerald-500'
-                      }`}
-                      style={{ width: `${barWidthPercent}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-
-        <div className="mt-4 pt-4 border-t border-slate-800/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-[11px] text-slate-400">
-          <span className="flex items-center gap-1.5 font-mono">
-            <Layers className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-            Method: Genuine SHAP (shap.Explainer Partition/Permutation)
-          </span>
-          <span className="text-slate-500 text-[10px]">
-            Target: Top Predicted Risk Head
-          </span>
+        {/* Advisory Caption */}
+        <div className="pt-3 border-t border-[var(--border)] text-[11px] text-[var(--text-muted)] leading-relaxed">
+          Explanations describe model behavior; they are not a verified vulnerability.
         </div>
       </div>
     </Card>

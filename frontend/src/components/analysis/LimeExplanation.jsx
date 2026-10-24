@@ -1,77 +1,173 @@
+import { useState } from 'react';
 import Card from '../common/Card';
-import { Sparkles, Code2 } from 'lucide-react';
+import Button from '../common/Button';
 
 const LimeExplanation = ({ explanations = [] }) => {
+  const [showTable, setShowTable] = useState(false);
+  const [showAll, setShowAll] = useState(false);
+
+  // Normalize LIME items
+  const items = explanations.map((item) => {
+    const rawWeight = item.weight ?? item.score ?? 0;
+    const absWeight = Math.abs(rawWeight);
+    const tokenOrCode = item.token ? `token: "${item.token}"` : (item.code || item.snippet || item.clause || 'Construct');
+    const isRaisesRisk = item.type === 'risk' || rawWeight >= 0;
+    const explanationText = item.explanation || item.description || 'Local linear surrogate regression weight.';
+
+    return {
+      label: tokenOrCode,
+      weight: rawWeight,
+      absWeight,
+      isRaisesRisk,
+      explanation: explanationText,
+    };
+  });
+
+  const sortedItems = [...items].sort((a, b) => b.absWeight - a.absWeight);
+  const displayedItems = showAll ? sortedItems : sortedItems.slice(0, 6);
+
+  const maxWeight = Math.max(
+    ...sortedItems.map((item) => item.absWeight),
+    0.01
+  );
+
   return (
     <Card
-      title="LIME Local Interpretability (Linear Surrogate)"
-      subtitle="Local Interpretable Model-agnostic Explanations (LimeTextExplainer) via token perturbation regression"
-      className="border-slate-800 bg-slate-900/60"
+      title="LIME contributions"
+      subtitle="How strongly local token perturbations pushed the risk score up or down (linear surrogate)"
+      action={
+        <Button
+          variant="tertiary"
+          size="sm"
+          onClick={() => setShowTable((prev) => !prev)}
+        >
+          {showTable ? 'View as chart' : 'View as table'}
+        </Button>
+      }
     >
-      <div className="space-y-4">
-        <p className="text-xs text-slate-400 leading-relaxed">
-          LIME generates local perturbations around the submitted contract representation to fit an interpretable sparse linear surrogate model, isolating individual token weights.
-        </p>
-
-        <div className="space-y-4 pt-1">
-          {explanations.length === 0 ? (
-            <div className="p-4 rounded-lg bg-slate-950/40 border border-slate-800 text-center text-xs text-slate-500">
-              No LIME surrogate weights computed for this contract scope.
+      <div className="space-y-4 text-[13px]">
+        {/* Table View Alternative */}
+        {showTable ? (
+          <div className="overflow-x-auto border border-[var(--border)] rounded-[4px]">
+            <table className="w-full text-left text-[12px] font-mono tnum">
+              <thead>
+                <tr className="border-b border-[var(--border)] bg-[var(--surface-subtle)] text-[var(--text-muted)]">
+                  <th className="p-2.5">Perturbed Token / Clause</th>
+                  <th className="p-2.5">Direction</th>
+                  <th className="p-2.5 text-right">LIME Weight</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[var(--border)]">
+                {sortedItems.map((item, idx) => (
+                  <tr key={idx} className="hover:bg-[var(--surface-subtle)]">
+                    <td className="p-2.5 font-medium text-[var(--text-main)]">
+                      {item.label}
+                    </td>
+                    <td className="p-2.5">
+                      <span
+                        className="font-semibold text-[11px]"
+                        style={{
+                          color: item.isRaisesRisk ? 'var(--chart-raises)' : 'var(--chart-lowers)',
+                        }}
+                      >
+                        {item.isRaisesRisk ? 'Raises risk' : 'Lowers risk'}
+                      </span>
+                    </td>
+                    <td className="p-2.5 text-right font-mono font-semibold text-[var(--text-main)]">
+                      {item.weight >= 0 ? `+${item.weight.toFixed(4)}` : item.weight.toFixed(4)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          /* Dual-direction horizontal bars */
+          <div className="space-y-3">
+            <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)] border-b border-[var(--border)] pb-2 select-none">
+              <span className="flex items-center gap-1.5" style={{ color: 'var(--chart-lowers)' }}>
+                ← Lowers risk
+              </span>
+              <span className="flex items-center gap-1.5" style={{ color: 'var(--chart-raises)' }}>
+                Raises risk →
+              </span>
             </div>
-          ) : (
-            explanations.map((item, idx) => {
-              const codeSnippet = item.token ? `token: "${item.token}"` : (item.code || item.snippet || item.clause || 'Clause construct');
-              const surrogateText = item.explanation || item.description || 'LIME local surrogate linear weight identifying marginal model activation.';
-              const rawWeight = item.weight ?? item.score ?? 0;
-              const weightVal = typeof rawWeight === 'number' ? rawWeight.toFixed(4) : String(rawWeight);
-              const isRisk = item.type === 'risk' || rawWeight > 0;
 
-              return (
-                <div
-                  key={idx}
-                  className="p-4 rounded-xl bg-slate-950/60 border border-slate-800/80 space-y-3"
+            {displayedItems.length === 0 ? (
+              <div className="p-4 text-center text-xs text-[var(--text-muted)]">
+                No LIME surrogate weights calculated for this scope.
+              </div>
+            ) : (
+              displayedItems.map((item, idx) => {
+                const widthPercent = Math.min(100, Math.round((item.absWeight / maxWeight) * 100));
+
+                return (
+                  <div key={idx} className="space-y-1">
+                    <div className="flex items-center justify-between text-[12px]">
+                      <span className="font-mono font-medium text-[var(--text-main)] truncate max-w-[280px]">
+                        {item.label}
+                      </span>
+                      <span
+                        className="font-mono text-xs font-semibold tnum shrink-0 ml-2"
+                        style={{
+                          color: item.isRaisesRisk ? 'var(--chart-raises)' : 'var(--chart-lowers)',
+                        }}
+                      >
+                        {item.weight >= 0 ? `+${item.weight.toFixed(4)}` : item.weight.toFixed(4)}
+                      </span>
+                    </div>
+
+                    <div className="relative h-2 w-full bg-[var(--surface-subtle)] rounded-[2px] overflow-hidden flex border border-[var(--border)]">
+                      <div className="absolute inset-y-0 left-1/2 w-px bg-[var(--border-strong)] z-10" />
+
+                      {/* Lowers risk */}
+                      <div className="w-1/2 flex justify-end">
+                        {!item.isRaisesRisk && (
+                          <div
+                            className="h-full rounded-l-[2px]"
+                            style={{
+                              width: `${widthPercent}%`,
+                              backgroundColor: 'var(--chart-lowers)',
+                            }}
+                          />
+                        )}
+                      </div>
+
+                      {/* Raises risk */}
+                      <div className="w-1/2 flex justify-start">
+                        {item.isRaisesRisk && (
+                          <div
+                            className="h-full rounded-r-[2px]"
+                            style={{
+                              width: `${widthPercent}%`,
+                              backgroundColor: 'var(--chart-raises)',
+                            }}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+
+            {sortedItems.length > 6 && (
+              <div className="pt-2">
+                <Button
+                  variant="tertiary"
+                  size="sm"
+                  onClick={() => setShowAll((prev) => !prev)}
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className={`p-1 rounded border ${isRisk ? 'bg-orange-500/10 text-orange-400 border-orange-500/20' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'}`}>
-                        <Code2 className="w-3.5 h-3.5" />
-                      </span>
-                      <span className="text-xs font-mono font-semibold text-slate-300">
-                        {isRisk ? 'Hazard Weight (+)' : 'Mitigating Weight (-)'}
-                      </span>
-                    </div>
+                  {showAll ? 'Show top 6 only' : `Show all ${sortedItems.length} tokens`}
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
 
-                    <div className="flex items-center gap-1.5 text-xs font-mono">
-                      <span className="text-slate-400">LIME Surrogate Weight:</span>
-                      <span className={`font-semibold ${isRisk ? 'text-orange-400' : 'text-emerald-400'}`}>
-                        {rawWeight > 0 ? `+${weightVal}` : weightVal}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Monospace Code Preview */}
-                  <div className="p-2.5 rounded-lg bg-slate-900 font-mono text-xs text-purple-300 border border-purple-900/40">
-                    {codeSnippet}
-                  </div>
-
-                  {/* Interpretation */}
-                  <p className="text-xs text-slate-300 leading-relaxed bg-slate-900/30 p-2.5 rounded border border-slate-800/60">
-                    {surrogateText}
-                  </p>
-                </div>
-              );
-            })
-          )}
-        </div>
-
-        <div className="pt-3 border-t border-slate-800/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-[11px] text-slate-400">
-          <span className="flex items-center gap-1.5 font-mono">
-            <Sparkles className="w-3.5 h-3.5 text-purple-400 shrink-0" />
-            Method: Genuine LIME (LimeTextExplainer Local Linear Surrogate)
-          </span>
-          <span className="text-slate-500 text-[10px]">
-            Sampling: Local Text Perturbations
-          </span>
+        {/* Caption */}
+        <div className="pt-3 border-t border-[var(--border)] text-[11px] text-[var(--text-muted)] leading-relaxed">
+          Explanations describe model behavior; they are not a verified vulnerability.
         </div>
       </div>
     </Card>

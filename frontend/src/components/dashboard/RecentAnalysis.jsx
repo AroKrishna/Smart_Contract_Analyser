@@ -1,94 +1,97 @@
 import { Link } from 'react-router-dom';
-import { FileCode, ArrowUpRight, ShieldCheck } from 'lucide-react';
 import Card from '../common/Card';
-import Badge from '../common/Badge';
+import SeverityTag from '../common/SeverityTag';
+import { ArrowRight } from 'lucide-react';
 
 const RecentAnalysis = ({ contracts = [] }) => {
   return (
     <Card
-      title="Recent Contract Analyses"
-      subtitle="Latest Solidity smart contracts evaluated by Legal-BERT with SHAP / LIME attribution"
+      title="Recent contract analyses"
+      subtitle="Latest Solidity smart contracts evaluated on this workspace"
       action={
         <Link
           to="/history"
-          className="text-xs text-blue-400 hover:text-blue-300 font-medium flex items-center gap-1"
+          className="text-[12px] text-[var(--accent)] hover:underline font-medium flex items-center gap-1 focus-ring rounded-[2px]"
         >
-          View all audits <ArrowUpRight className="w-3.5 h-3.5" />
+          View all audits <ArrowRight className="w-3.5 h-3.5" />
         </Link>
       }
-      className="border-slate-800/80 bg-slate-900/60"
       contentClassName="p-0 overflow-x-auto"
     >
-      <table className="w-full text-left border-collapse text-xs">
+      <table className="w-full text-left border-collapse text-[13px]">
         <thead>
-          <tr className="border-b border-slate-800/80 bg-slate-950/60 text-slate-400">
-            <th className="py-3 px-4 font-semibold uppercase tracking-wider text-[10px]">
+          <tr className="border-b border-[var(--border)] bg-[var(--surface-subtle)] text-[var(--text-muted)] font-mono">
+            <th className="py-2.5 px-4 font-semibold uppercase tracking-wider text-[11px]">
               Contract Name
             </th>
-            <th className="py-3 px-4 font-semibold uppercase tracking-wider text-[10px]">
+            <th className="py-2.5 px-4 font-semibold uppercase tracking-wider text-[11px]">
               Type
             </th>
-            <th className="py-3 px-4 font-semibold uppercase tracking-wider text-[10px]">
+            <th className="py-2.5 px-4 font-semibold uppercase tracking-wider text-[11px]">
               Audited At
             </th>
-            <th className="py-3 px-4 font-semibold uppercase tracking-wider text-[10px]">
+            <th className="py-2.5 px-4 font-semibold uppercase tracking-wider text-[11px]">
               Legal Risk
             </th>
-            <th className="py-3 px-4 font-semibold uppercase tracking-wider text-[10px] text-right">
+            <th className="py-2.5 px-4 font-semibold uppercase tracking-wider text-[11px] text-right">
               Action
             </th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-800/60">
-          {contracts.map((item) => (
-            <tr
-              key={item.id}
-              className="hover:bg-slate-850/40 transition-colors group"
-            >
-              <td className="py-3.5 px-4 font-medium text-slate-200">
-                <div className="flex items-center gap-2.5">
-                  <div className="p-1.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                    <FileCode className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <span className="font-semibold text-slate-200 group-hover:text-blue-400 transition-colors">
-                      {item.name}
-                    </span>
-                    <p className="text-[11px] text-slate-400 font-normal line-clamp-1">
-                      {item.description}
-                    </p>
-                  </div>
-                </div>
-              </td>
-
-              <td className="py-3.5 px-4 text-slate-400 whitespace-nowrap">
-                {item.contractType}
-              </td>
-
-              <td className="py-3.5 px-4 text-slate-400 whitespace-nowrap font-mono text-[11px]">
-                {item.auditDate}
-              </td>
-
-              <td className="py-3.5 px-4 whitespace-nowrap">
-                <div className="flex items-center gap-2">
-                  <Badge riskLevel={item.overallRiskLevel} size="sm" dot />
-                  <span className="font-mono text-slate-300 font-medium">
-                    {item.overallRiskScore}/100
-                  </span>
-                </div>
-              </td>
-
-              <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                <Link
-                  to={`/analysis/${item.id}`}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors text-xs font-medium border border-slate-700/80"
-                >
-                  <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
-                  View Audit
-                </Link>
+        <tbody className="divide-y divide-[var(--border)]">
+          {contracts.length === 0 ? (
+            <tr>
+              <td colSpan={5} className="py-6 px-4 text-center text-xs text-[var(--text-muted)]">
+                No contract analyses recorded yet. Run your first analysis to see results here.
               </td>
             </tr>
-          ))}
+          ) : (
+            contracts.map((item) => (
+              <tr
+                key={item.id}
+                className="hover:bg-[var(--surface-subtle)] transition-colors group"
+              >
+                <td className="py-3 px-4 font-medium text-[var(--text-main)]">
+                  <div>
+                    <span className="font-semibold font-mono text-[13px] group-hover:text-[var(--accent)] transition-colors">
+                      {item.name}
+                    </span>
+                    {item.description && (
+                      <p className="text-[11px] text-[var(--text-muted)] font-normal line-clamp-1">
+                        {item.description}
+                      </p>
+                    )}
+                  </div>
+                </td>
+
+                <td className="py-3 px-4 text-[var(--text-secondary)] whitespace-nowrap text-[12px]">
+                  {item.contractType || 'Solidity Contract'}
+                </td>
+
+                <td className="py-3 px-4 text-[var(--text-muted)] whitespace-nowrap font-mono text-[11px] tnum">
+                  {item.auditDate || 'Recent'}
+                </td>
+
+                <td className="py-3 px-4 whitespace-nowrap">
+                  <div className="flex items-center gap-2">
+                    <SeverityTag severity={item.overallRiskLevel} size="sm" />
+                    <span className="font-mono text-[var(--text-secondary)] font-medium tnum text-xs">
+                      {item.overallRiskScore}/100
+                    </span>
+                  </div>
+                </td>
+
+                <td className="py-3 px-4 text-right whitespace-nowrap">
+                  <Link
+                    to={`/analysis/${item.id}`}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-[3px] border border-[var(--border-strong)] bg-[var(--surface)] hover:bg-[var(--surface-subtle)] text-[var(--text-main)] transition-colors text-xs font-medium focus-ring"
+                  >
+                    Open review
+                  </Link>
+                </td>
+              </tr>
+            ))
+          )}
         </tbody>
       </table>
     </Card>

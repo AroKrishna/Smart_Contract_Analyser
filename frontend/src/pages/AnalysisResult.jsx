@@ -1,29 +1,23 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useLocation, useNavigate, Link } from 'react-router-dom';
 import {
-  ArrowLeft,
-  Download,
-  Share2,
-  FileCode,
-  Layers,
-  Lightbulb,
-  Cpu,
-  Copy,
-  Check,
-  Info,
-  Loader2,
   AlertCircle,
   PlusCircle,
+  Copy,
+  Check,
+  Shield,
+  Layers,
+  Lightbulb,
   MessageSquare,
-  FileText,
-  Trash2,
-  ShieldAlert,
+  ListFilter,
+  X,
 } from 'lucide-react';
 import Button from '../components/common/Button';
 import Modal from '../components/common/Modal';
-import RiskSummary from '../components/analysis/RiskSummary';
-import RiskCard from '../components/analysis/RiskCard';
+import AnalysisSummaryStrip from '../components/analysis/AnalysisSummaryStrip';
+import FindingsOutline from '../components/analysis/FindingsOutline';
 import CodeViewer from '../components/analysis/CodeViewer';
+import FindingDetailPanel from '../components/analysis/FindingDetailPanel';
 import ShapChart from '../components/analysis/ShapChart';
 import LimeExplanation from '../components/analysis/LimeExplanation';
 import RecommendationCard from '../components/analysis/RecommendationCard';
@@ -36,18 +30,28 @@ const AnalysisResult = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const [activeTab, setActiveTab] = useState('all'); // 'all' | 'code' | 'xai' | 'recommendations' | 'assistant'
-  const [downloading, setDownloading] = useState(false);
+  // Data state
+  const [contract, setContract] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
+
+  // Active finding selection
+  const [selectedFindingId, setSelectedFindingId] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [mobileActiveZone, setMobileActiveZone] = useState('source'); // 'findings' | 'source' | 'details'
+  const [tabletDrawerOpen, setTabletDrawerOpen] = useState(false);
+  const [activeSecondaryTab, setActiveSecondaryTab] = useState('xai'); // 'xai' | 'recommendations' | 'assistant'
+
+  // Action states
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [downloadingDocx, setDownloadingDocx] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [discarding, setDiscarding] = useState(false);
 
-  // Analysis data state
-  const [contract, setContract] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState(null);
+  const detailTitleRef = useRef(null);
 
+  // Load audit report
   useEffect(() => {
     let isCancelled = false;
 
@@ -55,21 +59,23 @@ const AnalysisResult = () => {
       setLoading(true);
       setLoadError(null);
 
-      // 1. Check if passed via React Router navigation state
+      // 1. Check router state
       const stateResult = location.state?.analysisResult;
       if (stateResult && (stateResult.analysisId === id || stateResult.id === id)) {
         if (!isCancelled) {
           setContract(stateResult);
+          initSelection(stateResult);
           setLoading(false);
         }
         return;
       }
 
-      // 2. Check cached or live API service (from ephemeral in-memory store)
+      // 2. Fetch from API or cache
       try {
         const liveResult = await api.getAnalysis(id);
         if (liveResult && !isCancelled) {
           setContract(liveResult);
+          initSelection(liveResult);
           setLoading(false);
           return;
         }
@@ -77,12 +83,19 @@ const AnalysisResult = () => {
         console.warn('API lookup by ID failed:', err);
       }
 
-      // 3. In Phase 1 no-login mode: Do NOT fall back to static mock data
       if (!isCancelled) {
         setLoadError(
-          `Audit report '${id}' could not be located. In Phase 1, uploaded contracts and analysis results are stored temporarily in memory (30-minute retention) and are not saved permanently.`
+          `Audit report '${id}' could not be located. In-memory temporary sessions expire after 30 minutes.`
         );
         setLoading(false);
+      }
+    }
+
+    function initSelection(data) {
+      const fList = data.findings || [];
+      if (fList.length > 0) {
+        const first = fList[0];
+        setSelectedFindingId(first.findingId || first.id || 'f-1');
       }
     }
 
@@ -94,7 +107,7 @@ const AnalysisResult = () => {
   }, [id, location.state]);
 
   const handleDownloadReport = async (format = 'PDF') => {
-    if (format === 'PDF') setDownloading(true);
+    if (format === 'PDF') setDownloadingPdf(true);
     else setDownloadingDocx(true);
 
     const aId = contract?.analysisId || contract?.id || id;
@@ -103,10 +116,10 @@ const AnalysisResult = () => {
     try {
       await api.downloadReport(aId, format, cName);
     } catch (err) {
-      console.warn('Backend report download failed:', err);
-      alert(`Structured Audit Report for "${cName}" export failed.`);
+      console.warn('Report download failed:', err);
+      alert(`Report export for "${cName}" failed.`);
     } finally {
-      if (format === 'PDF') setDownloading(false);
+      if (format === 'PDF') setDownloadingPdf(false);
       else setDownloadingDocx(false);
     }
   };
@@ -118,7 +131,7 @@ const AnalysisResult = () => {
   };
 
   const handleDiscardAndNew = async () => {
-    if (!window.confirm('Discard current temporary analysis result and start a new audit?')) {
+    if (!window.confirm('Discard current analysis result and start a new audit?')) {
       return;
     }
     setDiscarding(true);
@@ -131,14 +144,48 @@ const AnalysisResult = () => {
     navigate('/analysis/new');
   };
 
+  // Findings list and navigation
+  const findings = contract?.findings || [];
+  const selectedIndex = findings.findIndex(
+    (f, idx) => (f.findingId || f.id || `f-${idx + 1}`) === selectedFindingId
+  );
+  const currentFinding = selectedIndex >= 0 ? findings[selectedIndex] : findings[0] || null;
+
+  const handleSelectFinding = (findingId) => {
+    setSelectedFindingId(findingId);
+    setTabletDrawerOpen(false);
+    // On mobile, keep on source or switch to source
+    if (window.innerWidth < 768 && mobileActiveZone === 'findings') {
+      setMobileActiveZone('source');
+    }
+  };
+
+  const handlePreviousFinding = () => {
+    if (selectedIndex > 0) {
+      const prev = findings[selectedIndex - 1];
+      setSelectedFindingId(prev.findingId || prev.id || `f-${selectedIndex}`);
+    }
+  };
+
+  const handleNextFinding = () => {
+    if (selectedIndex < findings.length - 1) {
+      const next = findings[selectedIndex + 1];
+      setSelectedFindingId(next.findingId || next.id || `f-${selectedIndex + 2}`);
+    }
+  };
+
+  const handleEnterOnFinding = () => {
+    detailTitleRef.current?.focus();
+  };
+
   if (loading) {
     return (
-      <div className="py-24 flex flex-col items-center justify-center space-y-4">
-        <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
-        <h3 className="text-base font-semibold text-slate-200">
-          Loading Audit Report...
-        </h3>
-        <p className="text-xs text-slate-400 font-mono">
+      <div className="py-24 max-w-[720px] mx-auto text-center space-y-3">
+        <div className="w-8 h-8 rounded-full border-2 border-[var(--accent)] border-t-transparent animate-spin mx-auto" />
+        <h2 className="text-[16px] font-semibold text-[var(--text-main)]">
+          Loading audit report
+        </h2>
+        <p className="text-[12px] font-mono text-[var(--text-muted)]">
           Resolving temporary analysis ID: {id}
         </p>
       </div>
@@ -147,23 +194,25 @@ const AnalysisResult = () => {
 
   if (loadError || !contract) {
     return (
-      <div className="max-w-xl mx-auto py-16 space-y-5 text-center">
-        <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mx-auto">
-          <AlertCircle className="w-6 h-6" />
+      <div className="max-w-[720px] mx-auto py-16 text-center space-y-4">
+        <div className="w-10 h-10 rounded-[4px] bg-[var(--high-tint)] border border-[var(--high)] text-[var(--high)] flex items-center justify-center mx-auto">
+          <AlertCircle className="w-5 h-5" />
         </div>
-        <h3 className="text-lg font-bold text-slate-100">Audit Not Found or Expired</h3>
-        <p className="text-xs text-slate-400 leading-relaxed max-w-md mx-auto">
-          {loadError || `Unable to load audit '${id}'.`}
+        <h2 className="text-[18px] font-semibold text-[var(--text-main)]">
+          Audit report not found or expired
+        </h2>
+        <p className="text-[13px] text-[var(--text-secondary)] leading-relaxed max-w-md mx-auto">
+          {loadError || `Unable to load audit report '${id}'.`}
         </p>
-        <div className="flex items-center justify-center gap-3 pt-2">
+        <div className="pt-2 flex items-center justify-center gap-3">
           <Link to="/analysis/new">
             <Button variant="primary" size="sm" icon={PlusCircle}>
-              Start New Analysis
+              Start new analysis
             </Button>
           </Link>
-          <Link to="/">
+          <Link to="/dashboard">
             <Button variant="secondary" size="sm">
-              Home
+              Dashboard
             </Button>
           </Link>
         </div>
@@ -173,125 +222,64 @@ const AnalysisResult = () => {
 
   const contractName = contract.name || contract.contractName || 'Contract.sol';
   const analysisId = contract.id || contract.analysisId || id;
-  const disclosures = contract.modelDisclosures || {};
+  const overallRiskScore = contract.overallRiskScore ?? contract.riskScore ?? 0;
+  const overallRiskLevel = contract.overallRiskLevel || contract.riskLevel || 'Low';
 
   return (
-    <div className="space-y-8">
-      {/* ============================================================ */}
-      {/* 1. TOP HEADER & ACTIONS                                      */}
-      {/* ============================================================ */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
-        <div className="flex items-center gap-3">
-          <Link to="/analysis/new">
-            <Button variant="ghost" size="sm" icon={ArrowLeft}>
-              New Audit
-            </Button>
-          </Link>
-          <div className="h-4 w-px bg-slate-800" />
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-xl font-bold tracking-tight text-slate-100">
-                Audit Report: <span className="font-mono text-blue-400">{contractName}</span>
-              </h2>
+    <div className="space-y-6">
+      {/* 1. TOP SUMMARY STRIP */}
+      <AnalysisSummaryStrip
+        contractName={contractName}
+        analysisId={analysisId}
+        overallRiskScore={overallRiskScore}
+        overallRiskLevel={overallRiskLevel}
+        summary={contract.summary}
+        categories={contract.categories || []}
+        findings={findings}
+        onExport={handleDownloadReport}
+        onShare={() => setShareModalOpen(true)}
+        onDiscard={handleDiscardAndNew}
+        exportingPdf={downloadingPdf}
+        exportingDocx={downloadingDocx}
+        discarding={discarding}
+      />
 
-              <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-semibold flex items-center gap-1.5 font-mono">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                Legal-BERT Neural Inference
-              </span>
-            </div>
-
-            <p className="text-xs text-slate-400 mt-0.5">
-              Audit ID: <span className="font-mono text-slate-300">{analysisId}</span> • Temporary in-memory session (Phase 1)
-            </p>
-          </div>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex flex-wrap items-center gap-2.5">
-          <Button
-            variant="outline"
-            size="sm"
-            icon={Download}
-            isLoading={downloading}
-            onClick={() => handleDownloadReport('PDF')}
-          >
-            Export PDF
-          </Button>
-
-          <Button
-            variant="outline"
-            size="sm"
-            icon={FileText}
-            isLoading={downloadingDocx}
-            onClick={() => handleDownloadReport('DOCX')}
-          >
-            Export DOCX
-          </Button>
-
-          <Button
-            variant="secondary"
-            size="sm"
-            icon={Share2}
-            onClick={() => setShareModalOpen(true)}
-          >
-            Share
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            icon={Trash2}
-            isLoading={discarding}
-            onClick={handleDiscardAndNew}
-            className="text-red-400 hover:text-red-300 hover:bg-red-950/20 border border-red-900/40"
-          >
-            Discard & New
-          </Button>
-        </div>
-      </div>
-
-      {/* ============================================================ */}
-      {/* 2. RESEARCH PROTOTYPE & CRITICAL SAFETY WARNING BANNER       */}
-      {/* ============================================================ */}
-      <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/40 text-amber-200 space-y-3">
-        <div className="flex items-start gap-3">
-          <ShieldAlert className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
-          <div className="space-y-1.5 w-full">
+      {/* 2. STATUTORY SAFETY NOTICE & HELD-OUT TEST BENCHMARK */}
+      <div className="rounded-[4px] border border-[var(--border)] bg-[var(--surface-subtle)] p-4 text-[12px] text-[var(--text-secondary)] space-y-3">
+        <div className="flex items-start gap-2.5">
+          <Shield className="w-4 h-4 text-[var(--text-muted)] shrink-0 mt-0.5" />
+          <div className="space-y-1">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h3 className="text-xs sm:text-sm font-bold text-amber-100 flex items-center gap-2">
+              <span className="font-semibold text-[var(--text-main)]">
                 CRITICAL NOTICE: Absence of Findings is NOT Proof of Contract Safety
-              </h3>
-              <span className="text-[11px] px-2 py-0.5 rounded bg-amber-950/60 border border-amber-700/50 text-amber-300 font-mono">
+              </span>
+              <span className="text-[11px] font-mono text-[var(--text-muted)]">
                 Checkpoint: {contract.metadata?.checkpointName || contract.modelDisclosures?.checkpointName || 'legal_bert_v3.3.0'}
               </span>
             </div>
-            <p className="text-xs text-amber-300/90 leading-relaxed">
+            <p className="leading-relaxed text-[var(--text-secondary)]">
               {contract.safetyWarning || (
-                'Low predicted risk scores or the absence of detected findings do NOT constitute proof that a smart contract is safe, compliant, or free from operational legal hazards. This prototype Legal-BERT multi-label model was trained on a small dataset (N=44). In the held-out real-source test split (N=7), categories Privacy, Liability, and Payment / Financial had zero positive examples (inconclusive support), and the model missed all test positives for Termination and Legal Compliance at the default 0.50 uncalibrated threshold.'
+                'Low predicted risk scores or the absence of detected findings do NOT constitute proof that a smart contract is safe, compliant, or free from operational legal hazards. This prototype Legal-BERT multi-label model was trained on a small dataset (N=44). In the held-out real-source test split (N=7), categories Privacy, Liability, and Payment / Financial had zero positive examples (inconclusive support).'
               )}
             </p>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-amber-400/90 font-mono pt-1">
-              <span>• Raw scores are uncalibrated sigmoid outputs, NOT true statistical probabilities.</span>
-              <span>• Test Macro F1: 0.0000 | Specificity: 100.0% (28/28 negatives)</span>
-            </div>
           </div>
         </div>
 
-        {/* Experiment Report Test Benchmark Table */}
+        {/* Experiment Test Benchmark Table */}
         {contract.testEvaluationReport && (
-          <div className="mt-3 pt-3 border-t border-amber-500/20 text-xs text-slate-300 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="font-semibold text-amber-200 text-xs">
+          <div className="pt-2 border-t border-[var(--border)] space-y-1.5">
+            <div className="flex items-center justify-between text-[11px]">
+              <span className="font-semibold text-[var(--text-main)]">
                 Held-Out Real-Source Test Split Benchmark (N=7 Contracts, 35 Decisions)
               </span>
-              <span className="text-[10px] text-amber-400/70 font-mono">
+              <span className="font-mono text-[var(--text-muted)]">
                 Baseline TF-IDF Macro F1: 0.1600 vs Legal-BERT: 0.0000
               </span>
             </div>
-            <div className="overflow-x-auto rounded border border-amber-900/40 bg-slate-950/60">
-              <table className="w-full text-left text-[11px] font-mono">
+            <div className="overflow-x-auto border border-[var(--border)] rounded-[3px] bg-[var(--surface)]">
+              <table className="w-full text-left text-[11px] font-mono tnum">
                 <thead>
-                  <tr className="border-b border-amber-900/40 bg-amber-950/30 text-amber-300">
+                  <tr className="border-b border-[var(--border)] bg-[var(--surface-subtle)] text-[var(--text-muted)]">
                     <th className="p-2">Category</th>
                     <th className="p-2">Pos / Neg</th>
                     <th className="p-2">TP / FN / TN</th>
@@ -301,20 +289,20 @@ const AnalysisResult = () => {
                     <th className="p-2">Support Status</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60 text-slate-300">
+                <tbody className="divide-y divide-[var(--border)] text-[var(--text-secondary)]">
                   {contract.testEvaluationReport.categoryBreakdown?.map((cat, idx) => (
-                    <tr key={idx} className="hover:bg-slate-900/40">
-                      <td className="p-2 font-medium text-slate-200">{cat.category}</td>
+                    <tr key={idx} className="hover:bg-[var(--surface-subtle)]">
+                      <td className="p-2 font-medium text-[var(--text-main)]">{cat.category}</td>
                       <td className="p-2">{cat.testPositives} / {cat.testNegatives}</td>
                       <td className="p-2">{cat.truePositives} / {cat.falseNegatives} / {cat.trueNegatives}</td>
                       <td className="p-2">{cat.precision.toFixed(4)}</td>
                       <td className="p-2">{cat.recall.toFixed(4)}</td>
                       <td className="p-2">{cat.f1.toFixed(4)}</td>
                       <td className="p-2">
-                        <span className={`px-1.5 py-0.5 rounded text-[10px] ${
+                        <span className={`px-1.5 py-0.5 rounded-[2px] text-[10px] border ${
                           cat.supportStatus.includes('inconclusive')
-                            ? 'bg-slate-800 text-slate-400'
-                            : 'bg-red-950/50 text-red-300 border border-red-900/40'
+                            ? 'bg-[var(--surface-subtle)] text-[var(--text-muted)] border-[var(--border)]'
+                            : 'bg-[var(--critical-tint)] text-[var(--critical)] border-[var(--critical)]'
                         }`}>
                           {cat.supportStatus}
                         </span>
@@ -328,54 +316,208 @@ const AnalysisResult = () => {
         )}
       </div>
 
-      {/* ============================================================ */}
-      {/* 3. OVERALL RISK SUMMARY COMPONENT                            */}
-      {/* ============================================================ */}
-      <RiskSummary contract={contract} />
+      {/* 3. MOBILE SEGMENTED CONTROL (< 768px) */}
+      <div className="md:hidden flex border-b border-[var(--border)] mb-2" role="tablist">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mobileActiveZone === 'findings'}
+          onClick={() => setMobileActiveZone('findings')}
+          className={`flex-1 py-2 text-center text-xs font-medium border-b-2 transition-colors ${
+            mobileActiveZone === 'findings'
+              ? 'border-[var(--accent)] text-[var(--text-main)] font-semibold'
+              : 'border-transparent text-[var(--text-secondary)]'
+          }`}
+        >
+          Findings ({findings.length})
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mobileActiveZone === 'source'}
+          onClick={() => setMobileActiveZone('source')}
+          className={`flex-1 py-2 text-center text-xs font-medium border-b-2 transition-colors ${
+            mobileActiveZone === 'source'
+              ? 'border-[var(--accent)] text-[var(--text-main)] font-semibold'
+              : 'border-transparent text-[var(--text-secondary)]'
+          }`}
+        >
+          Source
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mobileActiveZone === 'details'}
+          onClick={() => setMobileActiveZone('details')}
+          className={`flex-1 py-2 text-center text-xs font-medium border-b-2 transition-colors ${
+            mobileActiveZone === 'details'
+              ? 'border-[var(--accent)] text-[var(--text-main)] font-semibold'
+              : 'border-transparent text-[var(--text-secondary)]'
+          }`}
+        >
+          Details
+        </button>
+      </div>
+
+      {/* TABLET OUTLINE TOGGLE (768px - 1199px) */}
+      <div className="hidden md:flex xl:hidden items-center justify-between py-1">
+        <Button
+          variant="secondary"
+          size="sm"
+          icon={ListFilter}
+          onClick={() => setTabletDrawerOpen((prev) => !prev)}
+        >
+          {tabletDrawerOpen ? 'Hide outline' : `Show findings outline (${findings.length})`}
+        </Button>
+        <span className="text-[12px] text-[var(--text-muted)] font-mono">
+          Selected: {currentFinding?.title || 'None'}
+        </span>
+      </div>
+
+      {/* TABLET DRAWER (when open on 768-1199px) */}
+      {tabletDrawerOpen && (
+        <div className="hidden md:block xl:hidden p-3 border border-[var(--border)] rounded-[4px] bg-[var(--surface)] shadow-md mb-4">
+          <div className="flex items-center justify-between pb-2 mb-2 border-b border-[var(--border)]">
+            <span className="font-semibold text-xs text-[var(--text-main)]">Review Outline</span>
+            <button
+              type="button"
+              onClick={() => setTabletDrawerOpen(false)}
+              className="p-1 rounded-[3px] text-[var(--text-muted)] hover:text-[var(--text-main)]"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <FindingsOutline
+            findings={findings}
+            selectedFindingId={selectedFindingId}
+            onSelectFinding={handleSelectFinding}
+            selectedCategory={selectedCategory}
+            onSelectCategory={setSelectedCategory}
+            onEnterPress={handleEnterOnFinding}
+          />
+        </div>
+      )}
 
       {/* ============================================================ */}
-      {/* 4. 5 RISK CATEGORIES BREAKDOWN                               */}
+      {/* 4. THE THREE-ZONE REVIEW WORKSPACE                           */}
       {/* ============================================================ */}
-      <RiskCard categories={contract.categories || []} />
+      <section
+        className="w-full grid grid-cols-1 md:grid-cols-12 gap-4 items-start"
+        aria-label="Contract review workspace"
+      >
+        {/* ZONE 1: Left Outline & Findings List (Desktop >= 1200px) */}
+        <div className="hidden xl:block xl:col-span-3">
+          <FindingsOutline
+            findings={findings}
+            selectedFindingId={selectedFindingId}
+            onSelectFinding={handleSelectFinding}
+            selectedCategory={selectedCategory}
+            onSelectCategory={setSelectedCategory}
+            onEnterPress={handleEnterOnFinding}
+          />
+        </div>
 
-      {/* ============================================================ */}
-      {/* 5. SECTION TABS                                              */}
-      {/* ============================================================ */}
-      <div className="border-b border-slate-800 flex items-center justify-between overflow-x-auto">
-        <div className="flex gap-4 min-w-max">
-          <button
-            type="button"
-            onClick={() => setActiveTab('all')}
-            className={`pb-3 text-xs font-semibold flex items-center gap-2 border-b-2 transition-colors ${
-              activeTab === 'all'
-                ? 'border-blue-500 text-blue-400'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
-            }`}
+        {/* MOBILE ZONE 1: Shown only when mobile tab is 'findings' */}
+        {mobileActiveZone === 'findings' && (
+          <div className="md:hidden col-span-1">
+            <FindingsOutline
+              findings={findings}
+              selectedFindingId={selectedFindingId}
+              onSelectFinding={handleSelectFinding}
+              selectedCategory={selectedCategory}
+              onSelectCategory={setSelectedCategory}
+              onEnterPress={handleEnterOnFinding}
+            />
+          </div>
+        )}
+
+        {/* ZONE 2: Center Solidity Source Viewer */}
+        <div
+          className={`col-span-1 ${
+            mobileActiveZone !== 'source' ? 'hidden md:block' : ''
+          } md:col-span-7 xl:col-span-6`}
+        >
+          <CodeViewer
+            code={contract.solidityCode || ''}
+            findings={findings}
+            selectedFindingId={selectedFindingId}
+            onSelectFinding={handleSelectFinding}
+            filename={contractName}
+          />
+        </div>
+
+        {/* ZONE 3: Right Annotation / Detail Panel */}
+        <div
+          className={`col-span-1 ${
+            mobileActiveZone !== 'details' ? 'hidden md:block' : ''
+          } md:col-span-5 xl:col-span-3`}
+        >
+          <FindingDetailPanel
+            finding={currentFinding}
+            totalFindings={findings.length}
+            currentIndex={selectedIndex >= 0 ? selectedIndex : 0}
+            onPrevious={handlePreviousFinding}
+            onNext={handleNextFinding}
+            onJumpToLines={() => {
+              if (window.innerWidth < 768) {
+                setMobileActiveZone('source');
+              }
+            }}
+            titleRef={detailTitleRef}
+          />
+        </div>
+      </section>
+
+      {/* MOBILE STICKY BOTTOM BAR (< 768px) */}
+      <div className="md:hidden sticky bottom-0 z-30 p-2.5 bg-[var(--surface-raised)] border-t border-[var(--border)] shadow-lg flex items-center justify-between text-xs font-mono">
+        <span className="text-[var(--text-secondary)] truncate mr-2">
+          Finding {selectedIndex + 1} of {findings.length}
+        </span>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handlePreviousFinding}
+            disabled={selectedIndex <= 0}
+            className="h-[28px] px-2 text-xs"
           >
-            <Cpu className="w-4 h-4" />
-            Full Audit View
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('code')}
-            className={`pb-3 text-xs font-semibold flex items-center gap-2 border-b-2 transition-colors ${
-              activeTab === 'code'
-                ? 'border-blue-500 text-blue-400'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
-            }`}
+            Prev
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleNextFinding}
+            disabled={selectedIndex >= findings.length - 1}
+            className="h-[28px] px-2 text-xs"
           >
-            <FileCode className="w-4 h-4" />
-            Code & Risky Clauses
-          </button>
+            Next
+          </Button>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() => setMobileActiveZone('details')}
+            className="h-[28px] px-2 text-xs"
+          >
+            Details
+          </Button>
+        </div>
+      </div>
 
+      {/* ============================================================ */}
+      {/* 5. SECONDARY ANALYSIS SECTIONS (XAI, MATRIX, ASSISTANT)     */}
+      {/* ============================================================ */}
+      <div className="pt-6 border-t border-[var(--border)] space-y-4">
+        {/* Underlined Section Tabs */}
+        <div className="border-b border-[var(--border)] flex items-center gap-6 overflow-x-auto" role="tablist">
           <button
             type="button"
-            onClick={() => setActiveTab('xai')}
-            className={`pb-3 text-xs font-semibold flex items-center gap-2 border-b-2 transition-colors ${
-              activeTab === 'xai'
-                ? 'border-blue-500 text-blue-400'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+            role="tab"
+            aria-selected={activeSecondaryTab === 'xai'}
+            onClick={() => setActiveSecondaryTab('xai')}
+            className={`nav-tab-underlined flex items-center gap-2 cursor-pointer pb-2.5 text-[14px] ${
+              activeSecondaryTab === 'xai'
+                ? 'text-[var(--text-main)] font-semibold border-b-2 border-[var(--accent)]'
+                : 'text-[var(--text-secondary)]'
             }`}
           >
             <Layers className="w-4 h-4" />
@@ -384,74 +526,65 @@ const AnalysisResult = () => {
 
           <button
             type="button"
-            onClick={() => setActiveTab('recommendations')}
-            className={`pb-3 text-xs font-semibold flex items-center gap-2 border-b-2 transition-colors ${
-              activeTab === 'recommendations'
-                ? 'border-blue-500 text-blue-400'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+            role="tab"
+            aria-selected={activeSecondaryTab === 'recommendations'}
+            onClick={() => setActiveSecondaryTab('recommendations')}
+            className={`nav-tab-underlined flex items-center gap-2 cursor-pointer pb-2.5 text-[14px] ${
+              activeSecondaryTab === 'recommendations'
+                ? 'text-[var(--text-main)] font-semibold border-b-2 border-[var(--accent)]'
+                : 'text-[var(--text-secondary)]'
             }`}
           >
             <Lightbulb className="w-4 h-4" />
-            Recommendations & Compliance
+            Remediation & Compliance
           </button>
 
           <button
             type="button"
-            onClick={() => setActiveTab('assistant')}
-            className={`pb-3 text-xs font-semibold flex items-center gap-2 border-b-2 transition-colors ${
-              activeTab === 'assistant'
-                ? 'border-blue-500 text-blue-400'
-                : 'border-transparent text-slate-400 hover:text-slate-200'
+            role="tab"
+            aria-selected={activeSecondaryTab === 'assistant'}
+            onClick={() => setActiveSecondaryTab('assistant')}
+            className={`nav-tab-underlined flex items-center gap-2 cursor-pointer pb-2.5 text-[14px] ${
+              activeSecondaryTab === 'assistant'
+                ? 'text-[var(--text-main)] font-semibold border-b-2 border-[var(--accent)]'
+                : 'text-[var(--text-secondary)]'
             }`}
           >
-            <MessageSquare className="w-4 h-4 text-emerald-400" />
-            AI Legal Assistant (Phase 6)
+            <MessageSquare className="w-4 h-4" />
+            AI Legal Assistant
           </button>
         </div>
+
+        {/* Tab 1: XAI Deep-Dive */}
+        {activeSecondaryTab === 'xai' && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <ShapChart explanations={contract.shapValues || contract.shapExplanations || contract.xai?.tokenAttributions || []} />
+            <LimeExplanation explanations={contract.limeExplanations || []} />
+          </div>
+        )}
+
+        {/* Tab 2: Recommendations & Statutory Compliance Matrix */}
+        {activeSecondaryTab === 'recommendations' && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <RecommendationCard recommendations={contract.recommendations || []} />
+            <ComplianceMatrix matrix={contract.complianceMatrix || []} />
+          </div>
+        )}
+
+        {/* Tab 3: AI Legal Assistant */}
+        {activeSecondaryTab === 'assistant' && (
+          <div className="max-w-[720px]">
+            <LegalChatAssistant contractId={analysisId} contractName={contractName} />
+          </div>
+        )}
       </div>
 
-      {/* ============================================================ */}
-      {/* 6. TABBED VIEWS                                              */}
-      {/* ============================================================ */}
-      {/* View 1: Code Viewer with Accurate Finding Line Numbers */}
-      {(activeTab === 'all' || activeTab === 'code') && (
-        <section className="space-y-4">
-          <CodeViewer
-            code={contract.solidityCode || ''}
-            findings={contract.findings || []}
-          />
-        </section>
-      )}
-
-      {/* View 2: XAI Interpretability (Genuine Neural Gradient Saliency) */}
-      {(activeTab === 'all' || activeTab === 'xai') && (
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <ShapChart explanations={contract.shapValues || contract.xai?.tokenAttributions || []} />
-          <LimeExplanation explanations={contract.limeExplanations || []} />
-        </section>
-      )}
-
-      {/* View 3: Recommendations & Compliance Matrix */}
-      {(activeTab === 'all' || activeTab === 'recommendations') && (
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <RecommendationCard recommendations={contract.recommendations || []} />
-          <ComplianceMatrix matrix={contract.complianceMatrix || []} />
-        </section>
-      )}
-
-      {/* View 4: Context-Scoped AI Legal Assistant */}
-      {(activeTab === 'all' || activeTab === 'assistant') && (
-        <section className="space-y-4">
-          <LegalChatAssistant contractId={analysisId} contractName={contractName} />
-        </section>
-      )}
-
-      {/* Share Report Modal */}
+      {/* Share Modal */}
       <Modal
         isOpen={shareModalOpen}
         onClose={() => setShareModalOpen(false)}
-        title="Share Structured Audit Report"
-        subtitle={`Decision-support report for ${contractName}`}
+        title="Share Audit Report"
+        subtitle={`Audit results for ${contractName}`}
         footer={
           <Button
             variant="secondary"
@@ -462,9 +595,9 @@ const AnalysisResult = () => {
           </Button>
         }
       >
-        <div className="space-y-4">
+        <div className="space-y-4 text-[13px]">
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1.5">
+            <label className="block text-[11px] font-semibold text-[var(--text-secondary)] uppercase tracking-wider mb-1">
               Direct Audit URL
             </label>
             <div className="flex items-center gap-2">
@@ -472,7 +605,7 @@ const AnalysisResult = () => {
                 type="text"
                 readOnly
                 value={window.location.href}
-                className="w-full bg-slate-950 border border-slate-800 rounded-lg text-xs font-mono text-slate-300 px-3 py-2 select-all focus:outline-none"
+                className="w-full bg-[var(--surface-subtle)] border border-[var(--border-strong)] rounded-[4px] text-xs font-mono text-[var(--text-main)] px-3 py-2 select-all focus-ring"
               />
               <Button
                 variant="primary"
@@ -484,13 +617,9 @@ const AnalysisResult = () => {
               </Button>
             </div>
           </div>
-
-          <div className="p-3 bg-slate-950/60 rounded-lg border border-slate-800 text-xs text-slate-400 space-y-1">
-            <span className="font-semibold text-slate-300">Auditor Note:</span>
-            <p>
-              Shared reports include full Legal-BERT category breakdown, word-embedding gradient saliency, and statutory compliance assessments.
-            </p>
-          </div>
+          <p className="text-[12px] text-[var(--text-muted)] leading-relaxed">
+            Shared URL points to this local session. Full reports can also be exported as PDF or Word DOCX.
+          </p>
         </div>
       </Modal>
     </div>

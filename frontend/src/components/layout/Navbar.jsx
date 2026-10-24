@@ -1,50 +1,47 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ShieldCheck, Menu, X, ArrowRight } from 'lucide-react';
+import { Shield, Menu, X, ArrowRight } from 'lucide-react';
 import { APP_NAME } from '../../utils/constants';
-import { useAuth } from '../../context/AuthContext';
 import Button from '../common/Button';
+import SettingsPopover from './SettingsPopover';
 
 const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
-  const { isAuthenticated } = useAuth();
   const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-slate-800/80 bg-slate-950/90 backdrop-blur-md">
+    <header className="sticky top-0 z-40 w-full border-b border-[var(--border)] bg-[var(--surface)] select-none">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex h-16 items-center justify-between gap-4">
+        <div className="flex h-[48px] items-center justify-between gap-4">
           {/* Logo / Brand */}
-          <Link to="/" className="flex items-center gap-2.5 text-slate-100 hover:text-white group">
-            <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-blue-600/10 border border-blue-500/30 text-blue-400 group-hover:border-blue-400 transition-colors">
-              <ShieldCheck className="w-5 h-5" />
-            </div>
-            <span className="font-semibold text-base tracking-tight text-slate-100">
+          <Link to="/" className="flex items-center gap-2 text-[var(--text-main)] focus-ring">
+            <Shield className="w-4 h-4 text-[var(--accent)] shrink-0" />
+            <span className="font-semibold text-[15px] tracking-tight text-[var(--text-main)]">
               {APP_NAME}
             </span>
           </Link>
 
-          {/* Desktop Nav Links (Visible on main landing page) */}
+          {/* Nav Links */}
           {!isAuthPage && (
-            <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-400">
-              <a href="#pipeline" className="hover:text-slate-200 transition-colors">
+            <nav className="hidden md:flex items-center gap-6 text-[13px] text-[var(--text-secondary)]" aria-label="Landing Page Navigation">
+              <a href="#overview" className="hover:text-[var(--text-main)] transition-colors focus-ring">
+                Overview
+              </a>
+              <a href="#pipeline" className="hover:text-[var(--text-main)] transition-colors focus-ring">
                 AI Pipeline
               </a>
-              <a href="#risk-categories" className="hover:text-slate-200 transition-colors">
+              <a href="#categories" className="hover:text-[var(--text-main)] transition-colors focus-ring">
                 Risk Categories
               </a>
-              <a href="#xai" className="hover:text-slate-200 transition-colors">
+              <a href="#xai" className="hover:text-[var(--text-main)] transition-colors focus-ring">
                 Explainability (XAI)
-              </a>
-              <a href="#methodology" className="hover:text-slate-200 transition-colors">
-                Auditing Scope
               </a>
             </nav>
           )}
 
           {/* Right Action Buttons */}
-          <div className="hidden sm:flex items-center gap-3">
+          <div className="hidden sm:flex items-center gap-2.5">
             <Link to="/dashboard">
               <Button variant="secondary" size="sm">
                 Dashboard
@@ -52,65 +49,72 @@ const Navbar = () => {
             </Link>
             <Link to="/analysis/new">
               <Button variant="primary" size="sm" icon={ArrowRight} iconPosition="right">
-                Audit Contract
+                Analyze contract
               </Button>
             </Link>
+            <SettingsPopover />
           </div>
 
           {/* Mobile Menu Toggle Button */}
-          <div className="flex md:hidden items-center gap-2">
+          <div className="flex items-center gap-2 sm:hidden">
+            <SettingsPopover />
             <button
               type="button"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-900 border border-slate-800"
-              aria-label="Toggle navigation menu"
+              onClick={() => setMobileMenuOpen((prev) => !prev)}
+              className="p-1.5 rounded-[4px] border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-main)] focus-ring"
+              aria-label="Toggle mobile menu"
             >
-              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
             </button>
           </div>
         </div>
       </div>
 
-      {/* Mobile Dropdown Menu */}
+      {/* Mobile Menu Dropdown */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-b border-slate-800 bg-slate-950 px-4 py-5 space-y-4">
-          {!isAuthPage && (
-            <div className="flex flex-col space-y-3 text-sm text-slate-300">
-              <a
-                href="#pipeline"
-                onClick={() => setMobileMenuOpen(false)}
-                className="hover:text-white py-1"
-              >
-                AI Pipeline
-              </a>
-              <a
-                href="#risk-categories"
-                onClick={() => setMobileMenuOpen(false)}
-                className="hover:text-white py-1"
-              >
-                Risk Categories
-              </a>
-              <a
-                href="#xai"
-                onClick={() => setMobileMenuOpen(false)}
-                className="hover:text-white py-1"
-              >
-                Explainability (XAI)
-              </a>
-              <a
-                href="#methodology"
-                onClick={() => setMobileMenuOpen(false)}
-                className="hover:text-white py-1"
-              >
-                Auditing Scope
-              </a>
-            </div>
-          )}
-            <Link to="/analysis/new" onClick={() => setMobileMenuOpen(false)} className="w-full">
-              <Button variant="primary" size="md" className="w-full">
-                Audit Contract (No Login)
+        <div className="sm:hidden border-t border-[var(--border)] bg-[var(--surface-raised)] px-4 py-3 space-y-3">
+          <nav className="flex flex-col space-y-2 text-sm text-[var(--text-secondary)]">
+            <a
+              href="#overview"
+              onClick={() => setMobileMenuOpen(false)}
+              className="py-1 hover:text-[var(--text-main)]"
+            >
+              Overview
+            </a>
+            <a
+              href="#pipeline"
+              onClick={() => setMobileMenuOpen(false)}
+              className="py-1 hover:text-[var(--text-main)]"
+            >
+              AI Pipeline
+            </a>
+            <a
+              href="#categories"
+              onClick={() => setMobileMenuOpen(false)}
+              className="py-1 hover:text-[var(--text-main)]"
+            >
+              Risk Categories
+            </a>
+            <a
+              href="#xai"
+              onClick={() => setMobileMenuOpen(false)}
+              className="py-1 hover:text-[var(--text-main)]"
+            >
+              Explainability (XAI)
+            </a>
+          </nav>
+          <div className="pt-2 border-t border-[var(--border)] flex flex-col gap-2">
+            <Link to="/dashboard" onClick={() => setMobileMenuOpen(false)}>
+              <Button variant="secondary" size="sm" className="w-full">
+                Dashboard
               </Button>
             </Link>
+            <Link to="/analysis/new" onClick={() => setMobileMenuOpen(false)}>
+              <Button variant="primary" size="sm" className="w-full">
+                Analyze contract
+              </Button>
+            </Link>
+          </div>
         </div>
       )}
     </header>

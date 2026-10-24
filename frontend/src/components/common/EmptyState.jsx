@@ -4,22 +4,22 @@ import Button from './Button';
 const EmptyState = ({
   icon: Icon = FolderSearch,
   title = 'No items found',
-  description = 'There are no records matching your current filter criteria.',
+  description = 'There are no records matching your current criteria.',
   actionLabel,
   onAction,
   className = '',
 }) => {
   return (
     <div
-      className={`p-12 text-center flex flex-col items-center justify-center space-y-3 ${className}`}
+      className={`p-10 text-center flex flex-col items-center justify-center space-y-2.5 text-[13px] ${className}`}
     >
-      <div className="w-12 h-12 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400 mb-1">
-        <Icon className="w-6 h-6" />
+      <div className="w-10 h-10 rounded-[4px] bg-[var(--surface-subtle)] border border-[var(--border)] flex items-center justify-center text-[var(--text-muted)] mb-1">
+        <Icon className="w-5 h-5" />
       </div>
 
-      <h4 className="text-sm font-semibold text-slate-200">{title}</h4>
+      <h4 className="text-[15px] font-semibold text-[var(--text-main)]">{title}</h4>
 
-      <p className="text-xs text-slate-400 max-w-sm leading-relaxed">
+      <p className="text-[12px] text-[var(--text-muted)] max-w-sm leading-relaxed">
         {description}
       </p>
 

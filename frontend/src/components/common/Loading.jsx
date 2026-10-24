@@ -14,13 +14,13 @@ const Loading = ({
 
   const content = (
     <div
-      className={`flex flex-col items-center justify-center space-y-2.5 ${className}`}
+      className={`flex flex-col items-center justify-center space-y-2.5 text-[13px] ${className}`}
     >
       <Loader2
-        className={`${spinnerSizes[size] || spinnerSizes.md} animate-spin text-blue-500`}
+        className={`${spinnerSizes[size] || spinnerSizes.md} animate-spin text-[var(--accent)]`}
       />
       {text && (
-        <span className="text-xs text-slate-400 font-medium animate-pulse">
+        <span className="text-[12px] text-[var(--text-muted)] font-mono">
           {text}
         </span>
       )}

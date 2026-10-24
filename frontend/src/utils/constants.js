@@ -26,27 +26,27 @@ export const RISK_LEVELS = {
 export const RISK_LEVEL_CONFIG = {
   [RISK_LEVELS.LOW]: {
     label: 'Low Risk',
-    badgeClass: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-    dotClass: 'bg-emerald-400',
-    barClass: 'bg-emerald-500',
+    badgeClass: 'bg-[var(--low-tint)] text-[var(--low)] border-[var(--low)]',
+    dotClass: 'bg-[var(--low)]',
+    barClass: 'bg-[var(--low)]',
   },
   [RISK_LEVELS.MEDIUM]: {
     label: 'Medium Risk',
-    badgeClass: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-    dotClass: 'bg-amber-400',
-    barClass: 'bg-amber-500',
+    badgeClass: 'bg-[var(--medium-tint)] text-[var(--medium)] border-[var(--medium)]',
+    dotClass: 'bg-[var(--medium)]',
+    barClass: 'bg-[var(--medium)]',
   },
   [RISK_LEVELS.HIGH]: {
     label: 'High Risk',
-    badgeClass: 'bg-orange-500/10 text-orange-400 border-orange-500/20',
-    dotClass: 'bg-orange-400',
-    barClass: 'bg-orange-500',
+    badgeClass: 'bg-[var(--high-tint)] text-[var(--high)] border-[var(--high)]',
+    dotClass: 'bg-[var(--high)]',
+    barClass: 'bg-[var(--high)]',
   },
   [RISK_LEVELS.CRITICAL]: {
     label: 'Critical Risk',
-    badgeClass: 'bg-red-500/10 text-red-400 border-red-500/20',
-    dotClass: 'bg-red-400',
-    barClass: 'bg-red-500',
+    badgeClass: 'bg-[var(--critical-tint)] text-[var(--critical)] border-[var(--critical)]',
+    dotClass: 'bg-[var(--critical)]',
+    barClass: 'bg-[var(--critical)]',
   },
 };
 
@@ -63,4 +63,3 @@ export const PIPELINE_STAGES = [
   { id: 7, name: 'Generating recommendations', detail: 'Synthesizing contract remediation guidance' },
   { id: 8, name: 'Preparing report', detail: 'Compiling structured decision-support audit' },
 ];
-

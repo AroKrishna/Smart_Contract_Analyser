@@ -10,26 +10,25 @@ const ErrorState = ({
 }) => {
   return (
     <div
-      className={`p-8 text-center flex flex-col items-center justify-center space-y-3 rounded-xl border border-red-500/20 bg-red-500/5 ${className}`}
+      className={`p-8 text-center flex flex-col items-center justify-center space-y-3 rounded-[4px] border border-[var(--critical)] bg-[var(--critical-tint)] ${className}`}
     >
-      <div className="w-12 h-12 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 mb-1">
-        <AlertTriangle className="w-6 h-6" />
+      <div className="w-10 h-10 rounded-[4px] bg-[var(--surface)] border border-[var(--critical)] flex items-center justify-center text-[var(--critical)] mb-1">
+        <AlertTriangle className="w-5 h-5" />
       </div>
 
-      <h4 className="text-sm font-semibold text-red-200">{title}</h4>
+      <h4 className="text-[15px] font-semibold text-[var(--critical)]">{title}</h4>
 
-      <p className="text-xs text-slate-400 max-w-sm leading-relaxed">
+      <p className="text-[13px] text-[var(--text-secondary)] max-w-sm leading-relaxed">
         {message}
       </p>
 
       {onRetry && (
         <div className="pt-2">
           <Button
-            variant="outline"
+            variant="destructive"
             size="sm"
             icon={RefreshCw}
             onClick={onRetry}
-            className="border-red-500/30 text-red-300 hover:bg-red-500/10"
           >
             {retryLabel}
           </Button>

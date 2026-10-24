@@ -5,36 +5,34 @@ const StatCard = ({
   value,
   subtitle,
   icon: Icon,
-  trend,
-  trendLabel,
   badgeText,
   badgeVariant = 'default',
 }) => {
   return (
-    <Card className="border-slate-800/80 bg-slate-900/60 p-5">
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-xs font-medium text-slate-400 uppercase tracking-wider">
+    <Card className="p-4 space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-wider">
           {title}
         </span>
         {Icon && (
-          <div className="p-2 rounded-lg bg-blue-600/10 border border-blue-500/20 text-blue-400">
-            <Icon className="w-4 h-4" />
-          </div>
+          <Icon className="w-4 h-4 text-[var(--text-muted)]" />
         )}
       </div>
 
-      <div className="flex items-baseline gap-2.5">
-        <span className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-100">
+      <div className="flex items-baseline justify-between gap-2">
+        <div className="text-[28px] font-bold text-[var(--text-main)] font-mono tracking-tight tnum">
           {value}
-        </span>
+        </div>
         {badgeText && (
           <span
-            className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+            className={`text-[11px] px-2 py-0.5 rounded-[3px] font-medium border ${
               badgeVariant === 'warning'
-                ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                ? 'bg-[var(--high-tint)] text-[var(--high)] border-[var(--high)]'
                 : badgeVariant === 'danger'
-                ? 'bg-red-500/10 text-red-400 border border-red-500/20'
-                : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                ? 'bg-[var(--critical-tint)] text-[var(--critical)] border-[var(--critical)]'
+                : badgeVariant === 'success'
+                ? 'bg-[var(--low-tint)] text-[var(--low)] border-[var(--low)]'
+                : 'bg-[var(--surface-subtle)] text-[var(--text-secondary)] border-[var(--border)]'
             }`}
           >
             {badgeText}
@@ -42,20 +40,10 @@ const StatCard = ({
         )}
       </div>
 
-      {(subtitle || trend) && (
-        <div className="mt-2 text-xs text-slate-400 flex items-center gap-1.5">
-          {trend && (
-            <span
-              className={`font-medium ${
-                trend > 0 ? 'text-amber-400' : 'text-emerald-400'
-              }`}
-            >
-              {trend > 0 ? `+${trend}%` : `${trend}%`}
-            </span>
-          )}
-          {trendLabel && <span>{trendLabel}</span>}
-          {subtitle && <span>{subtitle}</span>}
-        </div>
+      {subtitle && (
+        <p className="text-[12px] text-[var(--text-muted)] truncate">
+          {subtitle}
+        </p>
       )}
     </Card>
   );

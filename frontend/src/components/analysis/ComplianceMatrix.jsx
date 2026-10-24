@@ -1,48 +1,46 @@
 import Card from '../common/Card';
-import { Scale, CheckCircle2, AlertTriangle, AlertCircle } from 'lucide-react';
+import { AlertCircle, CheckCircle2, AlertTriangle } from 'lucide-react';
 
 const ComplianceMatrix = ({ matrix = [] }) => {
   return (
     <Card
-      title="Compliance Considerations Matrix"
+      title="Compliance considerations matrix"
       subtitle="Potential compliance assessment mapping based on statutory consumer and privacy standards"
-      className="border-slate-800 bg-slate-900/60"
       contentClassName="p-0 overflow-x-auto"
     >
-      <table className="w-full text-left border-collapse text-xs">
+      <table className="w-full text-left border-collapse text-[13px]">
         <thead>
-          <tr className="border-b border-slate-800/80 bg-slate-950/60 text-slate-400">
-            <th className="py-3 px-4 font-semibold uppercase tracking-wider text-[10px]">
+          <tr className="border-b border-[var(--border)] bg-[var(--surface-subtle)] text-[var(--text-muted)] font-mono">
+            <th className="py-2.5 px-4 font-semibold uppercase tracking-wider text-[11px]">
               Regulatory Domain
             </th>
-            <th className="py-3 px-4 font-semibold uppercase tracking-wider text-[10px]">
-              Compliance Assessment
+            <th className="py-2.5 px-4 font-semibold uppercase tracking-wider text-[11px]">
+              Assessment
             </th>
-            <th className="py-3 px-4 font-semibold uppercase tracking-wider text-[10px]">
+            <th className="py-2.5 px-4 font-semibold uppercase tracking-wider text-[11px]">
               Audit Notes & Observations
             </th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-800/60">
+        <tbody className="divide-y divide-[var(--border)]">
           {matrix.map((row, idx) => {
             const isWarning = row.status === 'Warning';
             const isPass = row.status === 'Pass';
 
             return (
-              <tr key={idx} className="hover:bg-slate-850/40 transition-colors">
-                <td className="py-3.5 px-4 font-medium text-slate-200 flex items-center gap-2">
-                  <Scale className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-                  <span>{row.area}</span>
+              <tr key={idx} className="hover:bg-[var(--surface-subtle)] transition-colors">
+                <td className="py-3 px-4 font-medium text-[var(--text-main)] whitespace-nowrap">
+                  {row.area}
                 </td>
 
-                <td className="py-3.5 px-4 whitespace-nowrap">
+                <td className="py-3 px-4 whitespace-nowrap">
                   <span
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border ${
+                    className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[3px] text-[11px] font-semibold border ${
                       isWarning
-                        ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                        ? 'bg-[var(--high-tint)] text-[var(--high)] border-[var(--high)]'
                         : isPass
-                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                        : 'bg-slate-800 text-slate-300 border-slate-700'
+                        ? 'bg-[var(--low-tint)] text-[var(--low)] border-[var(--low)]'
+                        : 'bg-[var(--surface-subtle)] text-[var(--text-secondary)] border-[var(--border)]'
                     }`}
                   >
                     {isWarning ? (
@@ -54,7 +52,7 @@ const ComplianceMatrix = ({ matrix = [] }) => {
                   </span>
                 </td>
 
-                <td className="py-3.5 px-4 text-slate-300 leading-relaxed max-w-md">
+                <td className="py-3 px-4 text-[var(--text-secondary)] leading-relaxed max-w-md">
                   {row.note}
                 </td>
               </tr>
@@ -64,10 +62,10 @@ const ComplianceMatrix = ({ matrix = [] }) => {
       </table>
 
       {/* Mandatory Non-Guarantee Disclaimer */}
-      <div className="p-4 bg-slate-950/70 border-t border-slate-800/80 flex items-start gap-2.5 text-xs text-slate-400">
-        <AlertCircle className="w-4 h-4 text-amber-400/90 shrink-0 mt-0.5" />
-        <p className="text-[11px] leading-relaxed">
-          <strong className="text-slate-300">Statutory Notice:</strong> This assessment evaluates potential compliance risks based on automated heuristics and Legal-BERT clause classification. It does not provide legal opinions, guarantee regulatory compliance under any jurisdiction, or replace official legal certification.
+      <div className="p-3 bg-[var(--surface-subtle)] border-t border-[var(--border)] flex items-start gap-2.5 text-[11px] text-[var(--text-muted)]">
+        <AlertCircle className="w-4 h-4 text-[var(--text-secondary)] shrink-0 mt-0.5" />
+        <p className="leading-relaxed">
+          Statutory Notice: This assessment evaluates potential compliance risks based on automated heuristics and Legal-BERT clause classification. It does not provide legal opinions, guarantee regulatory compliance under any jurisdiction, or replace official legal certification.
         </p>
       </div>
     </Card>

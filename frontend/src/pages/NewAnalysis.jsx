@@ -1,24 +1,17 @@
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   FileCode,
   Upload,
   Code2,
-  Play,
   AlertCircle,
-  Sparkles,
-  Activity,
-  Cpu,
-  RotateCcw,
-  CheckCircle2,
-  XCircle,
+  X,
 } from 'lucide-react';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
 import Card from '../components/common/Card';
 import Textarea from '../components/common/Textarea';
 import AnalysisProgress from '../components/analysis/AnalysisProgress';
-import { PIPELINE_STAGES } from '../utils/constants';
 import { api } from '../services/api';
 
 const SAMPLE_SOL_CODE = `// SPDX-License-Identifier: MIT
@@ -100,14 +93,14 @@ const NewAnalysis = () => {
 
   const [contractName, setContractName] = useState('EscrowSettlement.sol');
   const [description, setDescription] = useState('Two-party commercial settlement with emergency recovery');
-  const [activeTab, setActiveTab] = useState('paste'); // 'paste' | 'upload'
+  const [activeTab, setActiveTab] = useState('upload'); // 'upload' | 'paste'
   const [solidityCode, setSolidityCode] = useState(SAMPLE_SOL_CODE);
   const [uploadedFile, setUploadedFile] = useState(null);
   const [uploadedFileName, setUploadedFileName] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
-  const [backendStatus, setBackendStatus] = useState('checking'); // 'checking' | 'online' | 'offline'
+  const [backendStatus, setBackendStatus] = useState('checking'); // 'checking' | 'online' | 'offline' | 'model_unavailable'
 
-  // Live real processing state (driven by backend job status)
+  // Asynchronous progress tracking
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [activeJobId, setActiveJobId] = useState(null);
   const pollTimeoutRef = useRef(null);
@@ -117,7 +110,7 @@ const NewAnalysis = () => {
   const [realStageName, setRealStageName] = useState('Validating');
   const [isDragging, setIsDragging] = useState(false);
 
-  // Check backend service status and model readiness on mount
+  // Evaluate backend status on mount
   useEffect(() => {
     let isMounted = true;
     async function evaluateServiceStatus() {
@@ -159,12 +152,14 @@ const NewAnalysis = () => {
       setContractName('EscrowSettlement.sol');
       setDescription('Two-party commercial settlement with emergency recovery');
       setSolidityCode(SAMPLE_SOL_CODE);
-      setActiveTab('paste');
+      setUploadedFile(null);
+      setUploadedFileName('');
     } else {
       setContractName('TokenLendingPool.sol');
       setDescription('Collateralized token deposit and lending vault');
       setSolidityCode(SAMPLE_TOKEN_VAULT);
-      setActiveTab('paste');
+      setUploadedFile(null);
+      setUploadedFileName('');
     }
   };
 
@@ -175,6 +170,7 @@ const NewAnalysis = () => {
     setContractName('');
     setDescription('');
     setErrorMessage('');
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const processFile = (file) => {
@@ -237,16 +233,15 @@ const NewAnalysis = () => {
     }
 
     if (!solidityCode.trim()) {
-      setErrorMessage('Please paste or upload Solidity smart contract code.');
+      setErrorMessage('Please add Solidity source code by uploading a .sol file or pasting code.');
       return;
     }
 
     if (solidityCode.length > 1024 * 1024) {
-      setErrorMessage('Source code exceeds maximum permitted payload size of 1MB.');
+      setErrorMessage('Source code exceeds the maximum permitted payload size of 1MB.');
       return;
     }
 
-    // Pre-flight check: ensure backend is reachable before initiating
     if (backendStatus === 'offline') {
       const activeUrl = api.getBaseUrl();
       const targetLabel = activeUrl ? `at ${activeUrl}` : 'on port 8000';
@@ -259,18 +254,16 @@ const NewAnalysis = () => {
 
     if (backendStatus === 'model_unavailable') {
       setErrorMessage(
-        'Cannot initiate analysis: Legal-BERT model weights (legal_bert_v3.3.0) are unavailable on the backend. ' +
-        'Please ensure the model checkpoint is placed in analysis/models/legal_bert_v3.3.0/ or MODEL_WEIGHTS_URL is configured.'
+        'Cannot initiate analysis: Legal-BERT model checkpoint (legal_bert_v3.3.0) is not loaded on the backend. ' +
+        'Please ensure weights are in analysis/models/legal_bert_v3.3.0/.'
       );
       return;
     }
 
-    // Clear any previous polling timer
     if (pollTimeoutRef.current) {
       clearTimeout(pollTimeoutRef.current);
     }
 
-    // Begin asynchronous pipeline processing via job lifecycle
     setIsAnalyzing(true);
     setErrorMessage('');
     setCurrentStepIndex(0);
@@ -334,7 +327,7 @@ const NewAnalysis = () => {
             setIsAnalyzing(false);
             const finalResult = statusRes.result || (await api.getJobResult(jobId));
             navigate(`/analysis/${finalResult.analysisId}`, {
-              state: { analysisResult: finalResult }
+              state: { analysisResult: finalResult },
             });
             return;
           }
@@ -383,7 +376,6 @@ const NewAnalysis = () => {
     }
   };
 
-  // If running the pipeline, render the real progress tracker
   if (isAnalyzing) {
     return (
       <AnalysisProgress
@@ -398,179 +390,200 @@ const NewAnalysis = () => {
   }
 
   const linesCount = solidityCode ? solidityCode.split('\n').length : 0;
-  const charsCount = solidityCode ? solidityCode.length : 0;
+  const byteSize = solidityCode ? new Blob([solidityCode]).size : 0;
+  const sizeKb = Math.round((byteSize / 1024) * 10) / 10;
+  const hasContent = Boolean(solidityCode && solidityCode.trim());
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-6">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <h2 className="text-2xl font-bold tracking-tight text-slate-100">
-              New Smart Contract Audit
-            </h2>
-            {/* Live Backend Status Indicator */}
-            {backendStatus === 'online' ? (
-              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[11px] font-mono">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                Legal-BERT Online (Experimental v3.3.0)
-              </span>
-            ) : backendStatus === 'model_unavailable' ? (
-              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[11px] font-mono">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                Model Checkpoint Missing (503)
-              </span>
-            ) : backendStatus === 'offline' ? (
-              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400 text-[11px] font-mono">
-                <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
-                Backend Disconnected
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 text-[11px] font-mono">
-                <Activity className="w-3 h-3 animate-spin" />
-                Checking API...
-              </span>
-            )}
+    <div className="max-w-[720px] mx-auto py-2 space-y-6">
+      {/* Title & Concise Subtitle */}
+      <div className="space-y-1">
+        <h1 className="text-[24px] font-semibold text-[var(--text-main)] leading-tight">
+          New analysis
+        </h1>
+        <p className="text-[14px] text-[var(--text-secondary)]">
+          Analyze a Solidity contract on this machine.
+        </p>
+      </div>
+
+      {/* Backend Status or Missing Weights Warning */}
+      {backendStatus === 'model_unavailable' && (
+        <div className="p-3 rounded-[4px] bg-[var(--high-tint)] border border-[var(--high)] text-[13px] text-[var(--high)] flex items-start gap-2.5">
+          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+          <div>
+            <span className="font-semibold">Model weights missing: </span>
+            Legal-BERT checkpoint (legal_bert_v3.3.0) is not loaded on the backend service.
           </div>
-          <p className="text-xs sm:text-sm text-slate-400 mt-1">
-            Enterprise AI Audit: Upload or paste a Solidity contract (.sol) for Legal-BERT multi-label operational hazard classification.
-          </p>
         </div>
+      )}
 
-        {/* Quick Sample Selector */}
-        <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            icon={Sparkles}
-            onClick={() => handleLoadSample('escrow')}
-          >
-            Escrow Sample
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => handleLoadSample('vault')}
-          >
-            Lending Vault Sample
-          </Button>
-        </div>
-      </div>
-
-      {/* Experimental Model Advisory */}
-      <div className="bg-amber-950/20 border border-amber-500/25 rounded-xl p-3.5 text-xs text-amber-200/90 flex items-start gap-2.5">
-        <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-        <div className="space-y-0.5">
-          <span className="font-semibold text-amber-300">Experimental Decision-Support Notice: </span>
-          <span>
-            The Legal-BERT classification engine is an experimental research model evaluated on small-data benchmarks under strict project isolation. Predictions and SHAP/LIME attributions serve as operational decision-support indicators, not authoritative legal counsel or guarantees.
-          </span>
-        </div>
-      </div>
-
-      {/* Secure Storage & Retention Notice Banner */}
-      <div className="p-3.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-xs text-blue-200 flex items-start gap-3">
-        <Cpu className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
-        <div className="leading-relaxed">
-          <span className="font-semibold text-blue-100">Secure Sandboxed Storage: </span>
-          Uploaded contracts are stored in user-isolated sandboxed storage with a 30-day retention window and complete on-demand deletion.
-        </div>
-      </div>
-
-      {/* Backend Disconnected Notice */}
       {backendStatus === 'offline' && !errorMessage && (
-        <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-300 flex items-start gap-2.5">
-          <AlertCircle className="w-4 h-4 shrink-0 text-amber-400 mt-0.5" />
-          <div className="leading-relaxed">
-            <span className="font-semibold text-amber-200">Backend service not connected: </span>
-            Start your FastAPI service locally (<code className="px-1 py-0.5 bg-amber-950/60 rounded font-mono text-amber-200">uvicorn backend.main:app --host 127.0.0.1 --port 8000</code>), or verify your local backend connection.
+        <div className="p-3 rounded-[4px] bg-[var(--high-tint)] border border-[var(--high)] text-[13px] text-[var(--high)] flex items-start gap-2.5">
+          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+          <div>
+            <span className="font-semibold">Backend offline: </span>
+            Start the local FastAPI service (<code className="font-mono text-xs">uvicorn backend.main:app --port 8000</code>).
           </div>
         </div>
       )}
 
-      {/* Error Alert Bar */}
+      {/* Error message */}
       {errorMessage && (
-        <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-xs text-red-300 space-y-3">
-          <div className="flex items-start gap-2.5">
-            <AlertCircle className="w-4 h-4 shrink-0 text-red-400 mt-0.5" />
-            <div className="space-y-1">
-              <span className="font-semibold text-red-200">Analysis Submission Error:</span>
-              <p className="leading-relaxed">{errorMessage}</p>
-            </div>
+        <div className="p-3.5 rounded-[4px] bg-[var(--critical-tint)] border border-[var(--critical)] text-[13px] text-[var(--critical)] space-y-1">
+          <div className="flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+            <div className="font-medium leading-relaxed">{errorMessage}</div>
           </div>
         </div>
       )}
 
-      {/* Main Intake Form */}
+      {/* Main Form */}
       <form onSubmit={handleStartAnalysis} className="space-y-6">
-        <Card className="border-slate-800 bg-slate-900/60 p-6 space-y-5">
+        <Card className="space-y-5">
+          {/* Metadata Fields */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
-              label="Contract / Project Name"
+              label="Contract Name"
               id="contractName"
-              placeholder="e.g., EscrowSettlement.sol"
+              placeholder="e.g. EscrowSettlement.sol"
               value={contractName}
               onChange={(e) => setContractName(e.target.value)}
               required
             />
-
             <Input
               label="Description (Optional)"
               id="description"
-              placeholder="e.g., Two-party settlement escrow"
+              placeholder="e.g. Two-party settlement escrow"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />
           </div>
 
-          {/* Mode Switch Tabs */}
+          {/* Underlined Tabs: Upload file vs Paste source */}
           <div>
-            <div className="flex items-center justify-between border-b border-slate-800 mb-4">
-              <div className="flex gap-4">
+            <div className="flex items-center justify-between border-b border-[var(--border)] mb-4" role="tablist">
+              <div className="flex gap-6">
                 <button
                   type="button"
-                  onClick={() => setActiveTab('paste')}
-                  className={`pb-3 text-xs font-semibold flex items-center gap-2 border-b-2 transition-colors ${
-                    activeTab === 'paste'
-                      ? 'border-blue-500 text-blue-400'
-                      : 'border-transparent text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  <Code2 className="w-4 h-4" />
-                  Paste Solidity Code
-                </button>
-
-                <button
-                  type="button"
+                  role="tab"
+                  aria-selected={activeTab === 'upload'}
                   onClick={() => setActiveTab('upload')}
-                  className={`pb-3 text-xs font-semibold flex items-center gap-2 border-b-2 transition-colors ${
-                    activeTab === 'upload'
-                      ? 'border-blue-500 text-blue-400'
-                      : 'border-transparent text-slate-400 hover:text-slate-200'
+                  className={`nav-tab-underlined flex items-center gap-2 cursor-pointer pb-2.5 text-[14px] ${
+                    activeTab === 'upload' ? 'text-[var(--text-main)] font-semibold border-b-2 border-[var(--accent)]' : 'text-[var(--text-secondary)]'
                   }`}
                 >
                   <Upload className="w-4 h-4" />
-                  Upload .sol File
+                  Upload file
+                </button>
+
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={activeTab === 'paste'}
+                  onClick={() => setActiveTab('paste')}
+                  className={`nav-tab-underlined flex items-center gap-2 cursor-pointer pb-2.5 text-[14px] ${
+                    activeTab === 'paste' ? 'text-[var(--text-main)] font-semibold border-b-2 border-[var(--accent)]' : 'text-[var(--text-secondary)]'
+                  }`}
+                >
+                  <Code2 className="w-4 h-4" />
+                  Paste source
                 </button>
               </div>
 
-              <div className="flex items-center gap-3 text-[11px] text-slate-400 font-mono">
-                <span>{linesCount} lines ({Math.round(charsCount / 1024 * 10) / 10} KB)</span>
-                {solidityCode && (
-                  <button
-                    type="button"
-                    onClick={handleClearCode}
-                    className="text-slate-400 hover:text-red-400 flex items-center gap-1 transition-colors"
-                  >
-                    <RotateCcw className="w-3 h-3" /> Clear
-                  </button>
-                )}
+              {/* Quick Sample Selector */}
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-[var(--text-muted)] text-[12px] hidden sm:inline">Load sample:</span>
+                <button
+                  type="button"
+                  onClick={() => handleLoadSample('escrow')}
+                  className="text-xs text-[var(--accent)] hover:underline cursor-pointer focus-ring px-1.5 py-0.5 rounded-[2px]"
+                >
+                  Escrow
+                </button>
+                <span className="text-[var(--border)]">|</span>
+                <button
+                  type="button"
+                  onClick={() => handleLoadSample('vault')}
+                  className="text-xs text-[var(--accent)] hover:underline cursor-pointer focus-ring px-1.5 py-0.5 rounded-[2px]"
+                >
+                  Lending vault
+                </button>
               </div>
             </div>
 
-            {/* Tab 1: Paste Code */}
+            {/* TAB 1: Upload File Area */}
+            {activeTab === 'upload' && (
+              <div className="space-y-4">
+                <div
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  className={`min-h-[160px] rounded-[4px] border border-dashed p-6 flex flex-col items-center justify-center text-center transition-colors ${
+                    isDragging
+                      ? 'border-[var(--accent)] bg-[var(--accent-tint)]'
+                      : 'border-[var(--border-strong)] bg-[var(--surface-subtle)] hover:border-[var(--accent)]'
+                  }`}
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".sol"
+                    className="sr-only"
+                    id="contract-file-upload"
+                    onChange={handleFileUpload}
+                  />
+
+                  <FileCode className="w-8 h-8 text-[var(--text-secondary)] mb-2" aria-hidden="true" />
+
+                  {uploadedFileName ? (
+                    <div className="space-y-2">
+                      <div className="text-[14px] font-semibold text-[var(--text-main)] font-mono">
+                        {uploadedFileName}
+                      </div>
+                      <div className="text-[12px] text-[var(--text-muted)] font-mono tnum">
+                        {sizeKb} KB • {linesCount} lines
+                      </div>
+                      <div className="pt-1 flex items-center justify-center gap-2">
+                        <label
+                          htmlFor="contract-file-upload"
+                          className="inline-flex items-center justify-center h-[28px] px-3 text-xs font-medium rounded-[4px] border border-[var(--border-strong)] bg-[var(--surface)] text-[var(--text-main)] hover:bg-[var(--surface-subtle)] cursor-pointer focus-ring"
+                        >
+                          Change file
+                        </label>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          icon={X}
+                          onClick={handleClearCode}
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="text-[14px] text-[var(--text-main)] font-medium">
+                        Drag and drop a Solidity contract (.sol) here
+                      </div>
+                      <div className="text-[12px] text-[var(--text-muted)]">
+                        Up to 1MB. UTF-8 encoded Solidity source.
+                      </div>
+                      <div className="pt-2">
+                        <label
+                          htmlFor="contract-file-upload"
+                          className="inline-flex items-center justify-center h-[36px] px-4 text-[14px] font-medium rounded-[4px] border border-[var(--border-strong)] bg-[var(--surface)] text-[var(--text-main)] hover:bg-[var(--surface-subtle)] cursor-pointer focus-ring"
+                        >
+                          Choose file
+                        </label>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* TAB 2: Paste Code */}
             {activeTab === 'paste' && (
               <div className="space-y-2">
                 <Textarea
@@ -579,80 +592,66 @@ const NewAnalysis = () => {
                   placeholder="// Paste Solidity contract source code here..."
                   value={solidityCode}
                   onChange={(e) => setSolidityCode(e.target.value)}
-                  className="font-mono text-xs bg-slate-950/70 border-slate-800"
                   required
                 />
               </div>
             )}
 
-            {/* Tab 2: Upload File Dropzone */}
-            {activeTab === 'upload' && (
-              <div className="space-y-4">
-                <div
-                  onClick={() => fileInputRef.current?.click()}
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  onDrop={handleDrop}
-                  className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all ${
-                    isDragging
-                      ? 'border-blue-400 bg-blue-950/20'
-                      : 'border-slate-700 hover:border-blue-500 bg-slate-950/40'
-                  }`}
-                >
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".sol"
-                    className="hidden"
-                    onChange={handleFileUpload}
-                  />
-                  <div className="flex flex-col items-center justify-center space-y-3">
-                    <div className="p-3 bg-blue-600/10 rounded-full border border-blue-500/20 text-blue-400">
-                      <FileCode className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-slate-200">
-                        {uploadedFileName || 'Click or drag and drop your Solidity contract (.sol) here'}
-                      </p>
-                      <p className="text-xs text-slate-400 mt-1">
-                        Accepts standard Solidity files (.sol up to 1MB). Stored in secure user-isolated storage.
-                      </p>
-                    </div>
-                  </div>
+            {/* Small Read-Only Summary Once Content Exists */}
+            {hasContent && (
+              <div className="mt-3 p-2.5 rounded-[4px] bg-[var(--surface-subtle)] border border-[var(--border)] flex flex-wrap items-center justify-between text-[12px] text-[var(--text-secondary)] font-mono">
+                <div className="flex items-center gap-4">
+                  <span>File: <strong className="text-[var(--text-main)]">{contractName || 'Contract.sol'}</strong></span>
+                  <span>Lines: <strong className="text-[var(--text-main)] tnum">{linesCount}</strong></span>
+                  <span>Size: <strong className="text-[var(--text-main)] tnum">{sizeKb} KB</strong></span>
                 </div>
-
-                {solidityCode && (
-                  <div>
-                    <div className="flex items-center justify-between text-xs font-medium text-slate-400 mb-1.5">
-                      <span>Loaded Source Preview ({linesCount} lines)</span>
-                      <span className="text-emerald-400 font-mono text-[11px] flex items-center gap-1">
-                        <CheckCircle2 className="w-3.5 h-3.5" /> Ready for Legal-BERT
-                      </span>
-                    </div>
-                    <div className="bg-slate-950 rounded-lg p-3 text-xs font-mono text-slate-300 max-h-48 overflow-y-auto border border-slate-800/80">
-                      <pre>{solidityCode}</pre>
-                    </div>
-                  </div>
-                )}
+                <button
+                  type="button"
+                  onClick={handleClearCode}
+                  className="text-xs text-[var(--text-muted)] hover:text-[var(--critical)] cursor-pointer"
+                >
+                  Clear source
+                </button>
               </div>
             )}
           </div>
         </Card>
 
-        {/* Submit Actions */}
-        <div className="flex items-center justify-between pt-2">
-          <div className="text-xs text-slate-400">
-            Automated operational hazard assessment using Legal-BERT transformer classification.
+        {/* Submission Controls & Local Privacy Note */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-3">
+            <Button
+              type="submit"
+              variant="primary"
+              size="lg"
+              disabled={!hasContent || backendStatus === 'offline'}
+              disabledReason={
+                !hasContent
+                  ? 'Add a Solidity file or paste source code to enable analysis.'
+                  : backendStatus === 'offline'
+                  ? 'Start local backend service to enable analysis.'
+                  : ''
+              }
+            >
+              Run analysis
+            </Button>
+
+            {hasContent && (
+              <Button
+                type="button"
+                variant="tertiary"
+                size="md"
+                onClick={handleClearCode}
+              >
+                Clear source
+              </Button>
+            )}
           </div>
-          <Button
-            type="submit"
-            variant="primary"
-            size="lg"
-            icon={Play}
-            className="w-full sm:w-auto shadow-lg shadow-blue-600/20"
-          >
-            Start Legal-BERT & XAI Analysis
-          </Button>
+
+          {/* Local Processing / Privacy Note */}
+          <p className="text-[12px] text-[var(--text-muted)]">
+            Analysis runs locally. Source code is not sent anywhere.
+          </p>
         </div>
       </form>
     </div>

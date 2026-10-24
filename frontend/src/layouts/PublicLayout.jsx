@@ -4,9 +4,12 @@ import Footer from '../components/layout/Footer';
 
 const PublicLayout = ({ children }) => {
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
+    <div className="min-h-screen bg-[var(--canvas)] text-[var(--text-main)] flex flex-col">
+      <a href="#landing-content" className="skip-to-main-link">
+        Skip to main content
+      </a>
       <Navbar />
-      <main className="flex-1">
+      <main id="landing-content" tabIndex={-1} className="flex-1">
         {children || <Outlet />}
       </main>
       <Footer />
@@ -15,5 +18,3 @@ const PublicLayout = ({ children }) => {
 };
 
 export default PublicLayout;
-
-

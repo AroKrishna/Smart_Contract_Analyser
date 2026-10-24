@@ -8,7 +8,7 @@ const Modal = ({
   subtitle,
   children,
   footer,
-  maxWidth = 'max-w-lg',
+  maxWidth = 'max-w-md',
 }) => {
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -16,16 +16,12 @@ const Modal = ({
         onClose();
       }
     };
-
     if (isOpen) {
       document.body.style.overflow = 'hidden';
       window.addEventListener('keydown', handleKeyDown);
-    } else {
-      document.body.style.overflow = '';
     }
-
     return () => {
-      document.body.style.overflow = '';
+      document.body.style.overflow = 'unset';
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [isOpen, onClose]);
@@ -34,35 +30,36 @@ const Modal = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
       role="dialog"
       aria-modal="true"
+      aria-labelledby="modal-title"
     >
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-slate-950/80 backdrop-blur-xs transition-opacity"
+        className="fixed inset-0 bg-black/50 transition-opacity"
         onClick={onClose}
+        aria-hidden="true"
       />
 
-      {/* Modal Dialog Card */}
+      {/* Dialog window */}
       <div
-        className={`relative w-full ${maxWidth} rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl shadow-black/80 overflow-hidden z-10 animate-in fade-in zoom-in-95 duration-150`}
+        className={`relative w-full ${maxWidth} rounded-[4px] border border-[var(--border)] bg-[var(--surface-raised)] text-[var(--text-main)] shadow-xl overflow-hidden z-10 flex flex-col max-h-[90vh]`}
       >
         {/* Header */}
-        <div className="flex items-start justify-between p-5 border-b border-slate-800">
+        <div className="flex items-start justify-between p-4 border-b border-[var(--border)]">
           <div>
-            {title && (
-              <h3 className="text-base font-bold text-slate-100">{title}</h3>
-            )}
+            <h3 id="modal-title" className="text-[16px] font-semibold text-[var(--text-main)]">
+              {title}
+            </h3>
             {subtitle && (
-              <p className="text-xs text-slate-400 mt-0.5">{subtitle}</p>
+              <p className="text-[12px] text-[var(--text-muted)] mt-0.5">{subtitle}</p>
             )}
           </div>
-
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="p-1 rounded-[3px] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--surface-subtle)] focus-ring transition-colors cursor-pointer"
             aria-label="Close dialog"
           >
             <X className="w-4 h-4" />
@@ -70,11 +67,11 @@ const Modal = ({
         </div>
 
         {/* Body */}
-        <div className="p-6 text-sm text-slate-300">{children}</div>
+        <div className="p-4 overflow-y-auto flex-1 text-[13px]">{children}</div>
 
         {/* Footer */}
         {footer && (
-          <div className="p-4 bg-slate-950/50 border-t border-slate-800 flex items-center justify-end gap-2.5">
+          <div className="flex items-center justify-end gap-2 p-3 bg-[var(--surface-subtle)] border-t border-[var(--border)]">
             {footer}
           </div>
         )}

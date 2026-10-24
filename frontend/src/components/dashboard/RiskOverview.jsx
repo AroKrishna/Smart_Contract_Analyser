@@ -4,30 +4,28 @@ import { mockRiskCategoryDistribution } from '../../data/mockData';
 const RiskOverview = () => {
   return (
     <Card
-      title="Risk Category Breakdown"
-      subtitle="Pre-deployment legal risk clause distribution across audited contracts"
-      className="border-slate-800/80 bg-slate-900/60"
+      title="Risk category distribution"
+      subtitle="Relative distribution of detected clauses across standard categories"
     >
-      <div className="space-y-4">
+      <div className="space-y-3.5 text-[13px]">
         {mockRiskCategoryDistribution.map((item) => (
-          <div key={item.name} className="space-y-1.5">
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-medium text-slate-200">{item.name}</span>
-              <div className="flex items-center gap-2">
-                <span className="text-slate-400 font-mono">{item.count} clauses</span>
-                <span className="font-semibold text-slate-300 font-mono w-8 text-right">
+          <div key={item.name} className="space-y-1">
+            <div className="flex items-center justify-between text-[12px]">
+              <span className="font-medium text-[var(--text-main)]">{item.name}</span>
+              <div className="flex items-center gap-2 font-mono tnum text-[11px]">
+                <span className="text-[var(--text-muted)]">{item.count} clauses</span>
+                <span className="font-semibold text-[var(--text-secondary)] w-8 text-right">
                   {item.percentage}%
                 </span>
               </div>
             </div>
 
-            {/* Custom Bar Indicator */}
-            <div className="h-2 w-full bg-slate-950 rounded-full overflow-hidden border border-slate-800/60">
+            <div className="h-1.5 w-full bg-[var(--surface-subtle)] rounded-[2px] overflow-hidden border border-[var(--border)]">
               <div
-                className="h-full rounded-full transition-all duration-500"
+                className="h-full rounded-[2px] transition-all duration-300"
                 style={{
                   width: `${item.percentage}%`,
-                  backgroundColor: item.color,
+                  backgroundColor: 'var(--accent)',
                 }}
               />
             </div>
@@ -35,9 +33,9 @@ const RiskOverview = () => {
         ))}
       </div>
 
-      <div className="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
-        <span>Model: Legal-BERT Classifier</span>
-        <span className="font-mono">5 Primary Taxonomies</span>
+      <div className="mt-4 pt-3 border-t border-[var(--border)] flex items-center justify-between text-[11px] text-[var(--text-muted)]">
+        <span>Engine: Legal-BERT v3.3.0</span>
+        <span className="font-mono">5 Categories</span>
       </div>
     </Card>
   );

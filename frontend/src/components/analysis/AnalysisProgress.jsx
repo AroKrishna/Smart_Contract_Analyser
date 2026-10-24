@@ -1,5 +1,6 @@
-import { CheckCircle2, Loader2, Cpu, ShieldCheck } from 'lucide-react';
+import { CheckCircle2, Loader2, Shield } from 'lucide-react';
 import Card from '../common/Card';
+import Button from '../common/Button';
 import { PIPELINE_STAGES } from '../../utils/constants';
 
 const AnalysisProgress = ({
@@ -15,37 +16,34 @@ const AnalysisProgress = ({
     : Math.min(100, Math.round(((currentStepIndex + 1) / PIPELINE_STAGES.length) * 100));
 
   return (
-    <div className="max-w-2xl mx-auto py-8">
-      <Card className="border-slate-800 bg-slate-900/90 shadow-2xl p-6 sm:p-8">
+    <div className="max-w-[720px] mx-auto py-6">
+      <Card className="p-6">
         {/* Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-blue-600/10 border border-blue-500/30 text-blue-400 mb-3 animate-pulse">
-            <Cpu className="w-6 h-6" />
+        <div className="mb-6 space-y-2">
+          <div className="flex items-center justify-between">
+            <h2 className="text-[18px] font-semibold text-[var(--text-main)]">
+              Analysis in progress
+            </h2>
+            <span className="text-[13px] font-mono font-semibold text-[var(--accent)] tnum">
+              {progressPercent}%
+            </span>
           </div>
-          <h2 className="text-xl font-bold text-slate-100">
-            Running Legal-BERT & XAI Pipeline
-          </h2>
-          <p className="text-xs text-slate-400 mt-1">
-            Analyzing <span className="font-mono text-slate-300 font-semibold">{contractName}</span> for potential pre-deployment legal risks
+          <p className="text-[13px] text-[var(--text-secondary)]">
+            Analyzing <span className="font-mono text-[var(--text-main)] font-semibold">{contractName}</span> with Legal-BERT.
           </p>
 
-          {/* Real Backend Status Banner */}
           {stageMessage && (
-            <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-950/60 border border-blue-500/30 text-blue-300 text-xs font-mono">
-              <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-400 shrink-0" />
+            <div className="mt-2 flex items-center gap-2 p-2.5 rounded-[4px] bg-[var(--surface-subtle)] border border-[var(--border)] text-[12px] font-mono text-[var(--text-secondary)]">
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-[var(--accent)] shrink-0" />
               <span>{stageMessage}</span>
             </div>
           )}
 
-          {/* Progress Bar */}
-          <div className="mt-5 space-y-1.5">
-            <div className="flex justify-between text-xs text-slate-400">
-              <span>{stageName || `Pipeline Stage ${currentStepIndex + 1} of ${PIPELINE_STAGES.length}`}</span>
-              <span className="font-mono text-blue-400 font-semibold">{progressPercent}%</span>
-            </div>
-            <div className="h-2 w-full bg-slate-950 rounded-full overflow-hidden border border-slate-800">
+          {/* Progress bar */}
+          <div className="pt-2">
+            <div className="h-1.5 w-full bg-[var(--surface-subtle)] rounded-[2px] overflow-hidden border border-[var(--border)]">
               <div
-                className="h-full bg-blue-600 rounded-full transition-all duration-300 ease-out"
+                className="h-full bg-[var(--accent)] rounded-[2px] transition-all duration-300"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
@@ -53,7 +51,7 @@ const AnalysisProgress = ({
         </div>
 
         {/* 8-Stage Tracker */}
-        <div className="space-y-3">
+        <div className="space-y-1 divide-y divide-[var(--border)]">
           {PIPELINE_STAGES.map((stage, idx) => {
             const isCompleted = idx < currentStepIndex;
             const isCurrent = idx === currentStepIndex;
@@ -61,22 +59,21 @@ const AnalysisProgress = ({
             return (
               <div
                 key={stage.id}
-                className={`flex items-start gap-3 p-3 rounded-lg border transition-colors ${
+                className={`flex items-start gap-3 py-2.5 px-2 transition-colors ${
                   isCurrent
-                    ? 'bg-blue-600/10 border-blue-500/40 text-slate-100'
+                    ? 'bg-[var(--accent-tint)] rounded-[4px]'
                     : isCompleted
-                    ? 'bg-slate-950/60 border-slate-800/80 text-slate-300'
-                    : 'bg-slate-950/30 border-transparent text-slate-500'
+                    ? 'text-[var(--text-main)]'
+                    : 'text-[var(--text-muted)]'
                 }`}
               >
-
                 <div className="mt-0.5 shrink-0">
                   {isCompleted ? (
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                    <CheckCircle2 className="w-4 h-4 text-[var(--low)]" />
                   ) : isCurrent ? (
-                    <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />
+                    <Loader2 className="w-4 h-4 text-[var(--accent)] animate-spin" />
                   ) : (
-                    <div className="w-4 h-4 rounded-full border border-slate-700 flex items-center justify-center text-[10px] text-slate-500 font-mono">
+                    <div className="w-4 h-4 rounded-full border border-[var(--border-strong)] flex items-center justify-center text-[10px] text-[var(--text-muted)] font-mono tnum">
                       {stage.id}
                     </div>
                   )}
@@ -85,27 +82,23 @@ const AnalysisProgress = ({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
                     <span
-                      className={`text-xs font-medium ${
+                      className={`text-[13px] ${
                         isCurrent
-                          ? 'text-blue-300 font-semibold'
+                          ? 'font-semibold text-[var(--text-main)]'
                           : isCompleted
-                          ? 'text-slate-200'
-                          : 'text-slate-500'
+                          ? 'font-medium text-[var(--text-main)]'
+                          : 'text-[var(--text-muted)]'
                       }`}
                     >
                       {stage.name}
                     </span>
                     {isCurrent && (
-                      <span className="text-[10px] font-mono text-blue-400 uppercase tracking-wider">
-                        Processing...
+                      <span className="text-[10px] font-mono text-[var(--accent)] uppercase font-semibold">
+                        Processing
                       </span>
                     )}
                   </div>
-                  <p
-                    className={`text-[11px] mt-0.5 ${
-                      isCurrent || isCompleted ? 'text-slate-400' : 'text-slate-600'
-                    }`}
-                  >
+                  <p className="text-[12px] text-[var(--text-muted)] mt-0.5">
                     {stage.detail}
                   </p>
                 </div>
@@ -116,23 +109,24 @@ const AnalysisProgress = ({
 
         {/* Cancellation Option */}
         {onCancel && (
-          <div className="mt-6 flex justify-center">
-            <button
+          <div className="mt-6 pt-4 border-t border-[var(--border)] flex items-center justify-between">
+            <span className="text-[12px] text-[var(--text-muted)]">
+              Job running asynchronously on local backend
+            </span>
+            <Button
               type="button"
+              variant="destructive"
+              size="sm"
               onClick={onCancel}
-              className="text-xs px-3.5 py-1.5 rounded-lg border border-red-500/30 bg-red-950/30 text-red-300 hover:bg-red-900/40 hover:border-red-500/50 transition-colors"
             >
-              Cancel Analysis Job
-            </button>
+              Cancel analysis
+            </Button>
           </div>
         )}
 
-        {/* Prototype Disclaimer */}
-        <div className="mt-4 pt-4 border-t border-slate-800 text-center">
-          <p className="text-[11px] text-slate-500 flex items-center justify-center gap-1.5">
-            <ShieldCheck className="w-3.5 h-3.5 text-slate-400" />
-            Decision-support preview: UI representation of the planned AI analysis stages.
-          </p>
+        <div className="mt-4 pt-3 border-t border-[var(--border)] text-[11px] text-[var(--text-muted)] flex items-center gap-1.5">
+          <Shield className="w-3.5 h-3.5 text-[var(--text-secondary)] shrink-0" />
+          <span>Operational decision support indicator. Absence of findings is not proof of safety.</span>
         </div>
       </Card>
     </div>

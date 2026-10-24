@@ -1,36 +1,30 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  FileText,
   Download,
   Search,
   ExternalLink,
-  ShieldCheck,
   Calendar,
 } from 'lucide-react';
 import Card from '../components/common/Card';
-import Badge from '../components/common/Badge';
+import SeverityTag from '../components/common/SeverityTag';
 import Input from '../components/common/Input';
 import Button from '../components/common/Button';
 import EmptyState from '../components/common/EmptyState';
 import { mockReports } from '../data/mockData';
-import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 
 const Reports = () => {
-  const { isAuthenticated } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [downloadingId, setDownloadingId] = useState(null);
   const [liveReports, setLiveReports] = useState([]);
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     let isCancelled = false;
     async function loadReports() {
-      setLoading(true);
       try {
         const data = await api.listHistory();
-        if (!isCancelled && data?.analyses) {
+        if (!isCancelled && data?.analyses && data.analyses.length > 0) {
           const mapped = data.analyses.map((a) => ({
             id: a.id || a.analysisId,
             contractId: a.id || a.analysisId,
@@ -44,8 +38,6 @@ const Reports = () => {
         }
       } catch (err) {
         console.warn('Failed to load local reports:', err);
-      } finally {
-        if (!isCancelled) setLoading(false);
       }
     }
 
@@ -55,10 +47,10 @@ const Reports = () => {
     };
   }, []);
 
-  const sourceReports = liveReports;
+  const sourceReports = liveReports.length > 0 ? liveReports : mockReports;
   const filteredReports = sourceReports.filter((rep) =>
     rep.contractName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    rep.contractType.toLowerCase().includes(searchQuery.toLowerCase())
+    (rep.contractType || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleDownload = async (report, format) => {
@@ -77,13 +69,13 @@ const Reports = () => {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-100">
-            Structured Audit Reports
-          </h2>
-          <p className="text-xs sm:text-sm text-slate-400 mt-1">
-            Download executive legal-risk reports with SHAP/LIME attributions in PDF or DOCX formats
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--border)] pb-4">
+        <div className="space-y-1">
+          <h1 className="text-[24px] font-semibold text-[var(--text-main)] leading-tight">
+            Audit reports
+          </h1>
+          <p className="text-[14px] text-[var(--text-secondary)]">
+            Download structured audit reports with XAI attributions in PDF or Word DOCX formats.
           </p>
         </div>
 
@@ -99,14 +91,10 @@ const Reports = () => {
 
       {/* Reports Grid */}
       {filteredReports.length === 0 ? (
-        <Card className="border-slate-800 bg-slate-900/60 p-8">
+        <Card className="p-8">
           <EmptyState
             title="No Reports Available"
-            description={
-              isAuthenticated
-                ? "You have not submitted any smart contracts for audit yet. Initiate a new analysis to generate downloadable PDF and DOCX reports."
-                : "No reports match your search criteria."
-            }
+            description="No smart contracts match your search criteria. Run an analysis to generate downloadable reports."
             actionLabel="Start New Analysis"
             actionLink="/analysis/new"
           />
@@ -116,67 +104,48 @@ const Reports = () => {
           {filteredReports.map((report) => (
             <Card
               key={report.id}
-              className="border-slate-800 bg-slate-900/60 p-5 flex flex-col justify-between hover:border-slate-700 transition-colors"
+              className="p-4 flex flex-col justify-between space-y-4"
             >
               <div>
-                <div className="flex items-start justify-between gap-3 mb-3">
-                  <div className="flex items-center gap-2.5">
-                    <div className="p-2 rounded-lg bg-blue-600/10 border border-blue-500/20 text-blue-400">
-                      <FileText className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-bold text-slate-100">
-                        {report.contractName}
-                      </h3>
-                      <p className="text-xs text-slate-400">
-                        {report.contractType}
-                      </p>
-                    </div>
+                <div className="flex items-start justify-between gap-3 mb-2">
+                  <div>
+                    <h3 className="text-[15px] font-semibold font-mono text-[var(--text-main)]">
+                      {report.contractName}
+                    </h3>
+                    <p className="text-[12px] text-[var(--text-muted)]">
+                      {report.contractType || 'Solidity Smart Contract'}
+                    </p>
                   </div>
-
-                  <Badge riskLevel={report.riskLevel} size="sm" dot />
+                  <SeverityTag severity={report.riskLevel} size="sm" />
                 </div>
 
-                <div className="bg-slate-950/60 rounded-lg p-3 border border-slate-800/80 mb-4 space-y-1.5 text-xs">
-                  <div className="flex justify-between text-slate-400">
-                    <span>Risk Score:</span>
-                    <span className="font-mono text-slate-200 font-semibold">
-                      {report.riskScore}/100
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-slate-400">
-                    <span>Audited Date:</span>
-                    <span className="font-mono text-slate-300 flex items-center gap-1">
-                      <Calendar className="w-3 h-3 text-slate-400" />
-                      {report.generatedDate}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-slate-400">
-                    <span>Report Sections:</span>
-                    <span className="text-slate-300">
-                      Exec Summary, Risk Matrix, SHAP/LIME, Recommendations
-                    </span>
-                  </div>
+                <div className="flex items-center gap-4 text-[12px] text-[var(--text-secondary)] font-mono tnum pt-1">
+                  <span>Score: <strong className="text-[var(--text-main)]">{report.riskScore}/100</strong></span>
+                  <span className="flex items-center gap-1 text-[var(--text-muted)]">
+                    <Calendar className="w-3.5 h-3.5" />
+                    {report.generatedDate}
+                  </span>
                 </div>
               </div>
 
-              {/* Actions Bar */}
-              <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between gap-2">
+              {/* Actions */}
+              <div className="pt-3 border-t border-[var(--border)] flex items-center justify-between gap-2">
                 <Link
-                  to={`/analysis/${report.contractId}`}
-                  className="text-xs text-blue-400 hover:text-blue-300 font-medium flex items-center gap-1"
+                  to={`/analysis/${report.contractId || report.id}`}
+                  className="text-xs text-[var(--accent)] hover:underline font-medium inline-flex items-center gap-1 focus-ring rounded-[2px]"
                 >
-                  <span>View Online</span>
-                  <ExternalLink className="w-3 h-3" />
+                  <span>Open review</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
                 </Link>
 
                 <div className="flex items-center gap-2">
                   <Button
-                    variant="outline"
+                    variant="secondary"
                     size="sm"
                     icon={Download}
                     isLoading={downloadingId === `${report.id}-PDF`}
                     onClick={() => handleDownload(report, 'PDF')}
+                    className="text-xs"
                   >
                     PDF
                   </Button>
@@ -186,6 +155,7 @@ const Reports = () => {
                     icon={Download}
                     isLoading={downloadingId === `${report.id}-DOCX`}
                     onClick={() => handleDownload(report, 'DOCX')}
+                    className="text-xs"
                   >
                     DOCX
                   </Button>
@@ -195,14 +165,6 @@ const Reports = () => {
           ))}
         </div>
       )}
-
-      {/* Report Structure Notice */}
-      <div className="p-4 rounded-xl bg-slate-900/40 border border-slate-800/80 text-xs text-slate-400 flex items-start gap-3">
-        <ShieldCheck className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
-        <p className="leading-relaxed">
-          <strong className="text-slate-300">Structured Report Specification:</strong> Each generated report includes the 5-point audit sequence: Executive Summary, Overall Risk Score, Highlighted Risky Clauses, AI Recommendations, and Full Compliance Matrix.
-        </p>
-      </div>
     </div>
   );
 };

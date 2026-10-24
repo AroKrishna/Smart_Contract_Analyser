@@ -1,184 +1,236 @@
-import { useState } from 'react';
-import { AlertTriangle, Check, Copy, Info } from 'lucide-react';
-import Card from '../common/Card';
+import { useState, useRef, useEffect } from 'react';
+import { Copy, Check } from 'lucide-react';
+import { getSeverityConfig, normalizeSeverity } from '../../utils/severity';
 
 const CodeViewer = ({
   code = '',
-  highlightedLines: propHighlightedLines,
   findings = [],
+  selectedFindingId = null,
+  onSelectFinding = () => {},
+  filename = 'Contract.sol',
 }) => {
-  const lines = code ? code.split('\n') : [];
-
-  const hasDynamicFindings = Array.isArray(findings) && findings.length > 0;
-  const activeHighlightedLines = hasDynamicFindings
-    ? findings.flatMap((f) => f.lineNumbers || [])
-    : (propHighlightedLines || []);
-
   const [copied, setCopied] = useState(false);
-  const [selectedLine, setSelectedLine] = useState(
-    activeHighlightedLines.length > 0 ? activeHighlightedLines[0] : (lines.length > 0 ? 1 : 0)
-  );
+  const codeContainerRef = useRef(null);
+  const lineRefs = useRef(new Map());
 
-  const handleCopy = () => {
+  const lines = code ? code.split('\n') : [];
+  const linesCount = lines.length;
+
+  // Build a map of line number -> list of findings that touch this line
+  const lineFindingsMap = new Map();
+  findings.forEach((finding, fIdx) => {
+    const fId = finding.findingId || finding.id || `f-${fIdx + 1}`;
+    const nums = finding.lineNumbers || [];
+    nums.forEach((lineNum) => {
+      if (!lineFindingsMap.has(lineNum)) {
+        lineFindingsMap.set(lineNum, []);
+      }
+      lineFindingsMap.get(lineNum).push({ ...finding, computedId: fId, index: fIdx + 1 });
+    });
+  });
+
+  // Find the selected finding and its line numbers
+  const selectedFinding = findings.find(
+    (f, idx) => (f.findingId || f.id || `f-${idx + 1}`) === selectedFindingId
+  ) || findings[0];
+
+  const selectedLineNumbers = selectedFinding?.lineNumbers || [];
+
+  // Scroll to selected finding's first line when selectedFindingId changes
+  useEffect(() => {
+    if (selectedFindingId && selectedLineNumbers.length > 0) {
+      const firstLine = Math.min(...selectedLineNumbers);
+      const el = lineRefs.current.get(firstLine);
+      if (el && codeContainerRef.current) {
+        // Smooth scroll within container
+        const container = codeContainerRef.current;
+        const topPos = el.offsetTop - container.offsetTop - 40;
+        container.scrollTo({ top: Math.max(0, topPos), behavior: 'smooth' });
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedFindingId]);
+
+  const handleCopyCode = () => {
+    if (!code) return;
     navigator.clipboard.writeText(code);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const getLineRisk = (lineNum) => {
-    if (hasDynamicFindings) {
-      const match = findings.find((f) => (f.lineNumbers || []).includes(lineNum));
-      if (!match) return null;
+  // Determine highest severity on a line for gutter marker
+  const getLineGutterInfo = (lineNum) => {
+    const lineFindings = lineFindingsMap.get(lineNum);
+    if (!lineFindings || lineFindings.length === 0) return null;
 
-      const badgeClasses = {
-        Critical: 'bg-red-500/20 text-red-300 border-red-500/30',
-        High: 'bg-orange-500/20 text-orange-300 border-orange-500/30',
-        Medium: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
-        Low: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
-      };
+    const severityPriority = { Critical: 4, High: 3, Medium: 2, Low: 1 };
+    let highest = lineFindings[0];
+    let maxPrio = severityPriority[normalizeSeverity(highest.severity)] || 1;
 
-      return {
-        level: match.severity || 'Medium',
-        category: match.category,
-        clause: match.snippet ? match.snippet.split('\n')[0] : match.title,
-        explanation: match.description,
-        regulatoryCitation: match.regulatoryCitation,
-        badgeClass: badgeClasses[match.severity] || badgeClasses.Medium,
-      };
+    for (let i = 1; i < lineFindings.length; i++) {
+      const cur = lineFindings[i];
+      const prio = severityPriority[normalizeSeverity(cur.severity)] || 1;
+      if (prio > maxPrio) {
+        highest = cur;
+        maxPrio = prio;
+      }
     }
 
-    return null;
+    return {
+      highestFinding: highest,
+      count: lineFindings.length,
+      config: getSeverityConfig(highest.severity),
+      allFindings: lineFindings,
+    };
   };
 
-  const currentRisk = getLineRisk(selectedLine);
-
   return (
-    <Card
-      title="Solidity Source Code & Clause Highlighting"
-      subtitle="Interactive code viewer highlighting sections classified by Legal-BERT with severe risk signals"
-      action={
-        <button
-          type="button"
-          onClick={handleCopy}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors text-xs font-medium border border-slate-700"
-        >
-          {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-          {copied ? 'Copied' : 'Copy Source'}
-        </button>
-      }
-      className="border-slate-800 bg-slate-900/60"
-      contentClassName="p-0"
+    <div
+      className="rounded-[4px] border border-[var(--border)] bg-[var(--surface)] flex flex-col overflow-hidden text-[13px]"
+      aria-label={`Solidity source: ${filename}`}
     >
-      <div className="grid grid-cols-1 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-slate-800">
-        {/* Code Lines Viewer */}
-        <div className="lg:col-span-8 bg-slate-950/80 font-mono text-xs overflow-x-auto max-h-[500px] overflow-y-auto">
-          <div className="min-w-[500px]">
-            {lines.map((lineText, idx) => {
-              const lineNum = idx + 1;
-              const isHighlighted = activeHighlightedLines.includes(lineNum);
-              const isSelected = selectedLine === lineNum;
-              const riskInfo = getLineRisk(lineNum);
+      {/* Header Row: Filename, line count, copy button */}
+      <div className="flex items-center justify-between px-3.5 py-2 border-b border-[var(--border)] bg-[var(--surface-subtle)] select-none">
+        <div className="flex items-center gap-3">
+          <span className="font-mono text-[12px] font-semibold text-[var(--text-main)]">
+            {filename}
+          </span>
+          <span className="text-[11px] text-[var(--text-muted)] font-mono tnum">
+            {linesCount} {linesCount === 1 ? 'line' : 'lines'}
+          </span>
+        </div>
 
-              return (
-                <div
-                  key={lineNum}
-                  onClick={() => riskInfo && setSelectedLine(lineNum)}
-                  className={`flex items-center group transition-colors ${
-                    isSelected
-                      ? 'bg-blue-600/15 border-l-2 border-blue-500'
-                      : isHighlighted
-                      ? 'bg-red-500/10 hover:bg-red-500/15 border-l-2 border-red-500/80 cursor-pointer'
-                      : 'hover:bg-slate-900/60 border-l-2 border-transparent'
-                  }`}
-                >
-                  {/* Line Number */}
-                  <span className="w-12 py-1 px-3 select-none text-right text-slate-400 shrink-0 text-[11px]">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleCopyCode}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-[3px] border border-[var(--border)] bg-[var(--surface)] text-[var(--text-secondary)] hover:text-[var(--text-main)] hover:bg-[var(--surface-subtle)] focus-ring transition-colors cursor-pointer"
+            aria-label="Copy source code to clipboard"
+          >
+            {copied ? (
+              <>
+                <Check className="w-3.5 h-3.5 text-[var(--low)]" />
+                <span className="text-[var(--low)] font-medium">Copied</span>
+              </>
+            ) : (
+              <>
+                <Copy className="w-3.5 h-3.5" />
+                <span>Copy</span>
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Code Viewer Body */}
+      <div
+        ref={codeContainerRef}
+        tabIndex={0}
+        aria-label={`Code content for ${filename}. Use arrow keys to scroll.`}
+        className="overflow-x-auto overflow-y-auto max-h-[620px] bg-[var(--code-bg)] font-mono text-[13px] leading-[20px] focus-ring"
+      >
+        <div className="min-w-fit w-full">
+          {lines.map((lineContent, idx) => {
+            const lineNum = idx + 1;
+            const gutterInfo = getLineGutterInfo(lineNum);
+            const isSelectedRange = selectedLineNumbers.includes(lineNum);
+            const isFirstSelectedLine = selectedLineNumbers[0] === lineNum;
+            const isLastSelectedLine = selectedLineNumbers[selectedLineNumbers.length - 1] === lineNum;
+
+            // Highlight styling as specified in design guide section 2 and 6:
+            // Full width severity tint, severity left edge (3px for Critical/High, 2px Medium, 1px Low),
+            // and underline pattern (solid 2px for Critical, dashed for High, dotted for Medium).
+            let rowStyle = {};
+            let leftEdgeClass = 'border-l-[3px] border-transparent';
+            let underlineClass = '';
+
+            if (gutterInfo) {
+              const cfg = gutterInfo.config;
+              rowStyle.backgroundColor = cfg.tintVar;
+              leftEdgeClass = cfg.edgeClass;
+              rowStyle.borderLeftColor = cfg.cssVar;
+              underlineClass = cfg.underlineClass;
+            }
+
+            // Outline for active selected finding
+            const selectedOutlineClass = isSelectedRange
+              ? `bg-[var(--accent-tint)]/40 ${isFirstSelectedLine ? 'border-t border-t-[var(--accent)]' : ''} ${isLastSelectedLine ? 'border-b border-b-[var(--accent)]' : ''}`
+              : '';
+
+            return (
+              <div
+                key={lineNum}
+                ref={(el) => {
+                  if (el) lineRefs.current.set(lineNum, el);
+                  else lineRefs.current.delete(lineNum);
+                }}
+                className={`flex items-stretch hover:bg-[var(--surface-subtle)]/70 transition-colors ${leftEdgeClass} ${selectedOutlineClass}`}
+                style={rowStyle}
+              >
+                {/* Gutter: 56px wide, surface subtle background, 1px right rule */}
+                <div className="w-[56px] shrink-0 bg-[var(--code-gutter)] border-r border-[var(--border)] flex items-center justify-between px-2 select-none">
+                  {/* Line Number: 12px mono, muted text, right-aligned, non-selectable */}
+                  <span className="text-[12px] text-[var(--text-muted)] font-mono tnum text-right w-6">
                     {lineNum}
                   </span>
 
-                  {/* Flag indicator if risk detected */}
-                  <span className="w-5 text-center shrink-0">
-                    {riskInfo && (
-                      <AlertTriangle
-                        className={`w-3.5 h-3.5 inline ${
-                          riskInfo.level === 'Critical'
-                            ? 'text-red-400'
-                            : 'text-amber-400'
-                        }`}
-                      />
+                  {/* Finding marker shape button in gutter */}
+                  <div className="w-4 flex items-center justify-center">
+                    {gutterInfo && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const targetId = gutterInfo.highestFinding.computedId;
+                          onSelectFinding(targetId);
+                        }}
+                        title={`Finding: ${gutterInfo.highestFinding.title} (${gutterInfo.highestFinding.severity})`}
+                        aria-label={`Finding at line ${lineNum}: ${gutterInfo.highestFinding.severity} severity, activate to select finding`}
+                        className="p-0.5 text-[11px] leading-none focus-ring rounded-[2px] cursor-pointer hover:scale-125 transition-transform"
+                        style={{ color: gutterInfo.config.cssVar }}
+                      >
+                        {gutterInfo.config.shape}
+                        {gutterInfo.count > 1 && (
+                          <span className="text-[9px] font-bold ml-0.5 font-mono">
+                            {gutterInfo.count}
+                          </span>
+                        )}
+                      </button>
                     )}
-                  </span>
-
-                  {/* Code Line Content */}
-                  <span
-                    className={`py-1 pr-4 whitespace-pre flex-1 ${
-                      isHighlighted
-                        ? 'text-red-200 font-medium'
-                        : 'text-slate-300'
-                    }`}
-                  >
-                    {lineText || ' '}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Selected Clause Risk Inspector */}
-        <div className="lg:col-span-4 p-5 bg-slate-900/40 flex flex-col justify-between space-y-4">
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                Clause Inspector
-              </span>
-              <span className="text-[11px] font-mono text-slate-400">
-                Line {selectedLine}
-              </span>
-            </div>
-
-            {currentRisk ? (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-slate-200">
-                    {currentRisk.category}
-                  </span>
-                  <span
-                    className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${currentRisk.badgeClass}`}
-                  >
-                    {currentRisk.level} Risk
-                  </span>
-                </div>
-
-                <div className="p-2.5 rounded bg-slate-950 font-mono text-xs text-red-300 border border-slate-800">
-                  {currentRisk.clause}
-                </div>
-
-                <p className="text-xs text-slate-300 leading-relaxed bg-slate-900/60 p-3 rounded-lg border border-slate-800">
-                  {currentRisk.explanation}
-                </p>
-
-                {currentRisk.regulatoryCitation && (
-                  <div className="text-[10px] text-slate-400 font-mono bg-slate-950/40 p-2 rounded border border-slate-800/80">
-                    <span className="text-slate-500 uppercase tracking-wider text-[9px] block mb-0.5">Citation Benchmark:</span>
-                    {currentRisk.regulatoryCitation}
                   </div>
-                )}
-              </div>
-            ) : (
-              <div className="p-4 rounded-lg bg-slate-950/60 border border-slate-800 text-center text-xs text-slate-500">
-                <Info className="w-4 h-4 mx-auto mb-1.5 text-slate-400" />
-                Select any highlighted line to inspect detected legal risks.
-              </div>
-            )}
-          </div>
+                </div>
 
-          <div className="pt-3 border-t border-slate-800/80 text-[11px] text-slate-400">
-            Click on flagged lines in the code viewer to isolate SHAP token influences.
-          </div>
+                {/* Code line content: non-wrapping whitespace-pre */}
+                <div
+                  onClick={() => {
+                    if (gutterInfo) {
+                      onSelectFinding(gutterInfo.highestFinding.computedId);
+                    }
+                  }}
+                  className={`px-3 py-[2px] whitespace-pre text-[var(--text-main)] font-mono flex-1 select-text ${
+                    gutterInfo ? 'cursor-pointer' : ''
+                  } ${underlineClass}`}
+                  style={
+                    gutterInfo
+                      ? {
+                          textDecorationColor: gutterInfo.config.cssVar,
+                        }
+                      : undefined
+                  }
+                >
+                  {lineContent || ' '}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
-    </Card>
+
+      {/* Footer bar with finding jump shortcut notice */}
+      <div className="px-3.5 py-1.5 border-t border-[var(--border)] bg-[var(--surface-subtle)] flex items-center justify-between text-[11px] text-[var(--text-muted)] select-none">
+        <span>Click flagged gutter markers or highlighted lines to inspect details</span>
+        <span className="font-mono hidden sm:inline">IBM Plex Mono</span>
+      </div>
+    </div>
   );
 };
 
