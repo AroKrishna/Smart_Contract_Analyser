@@ -24,6 +24,7 @@ import uuid
 import datetime
 import shutil
 import tempfile
+import threading
 from typing import Dict, Any, List, Optional, Tuple
 
 import numpy as np
@@ -504,6 +505,7 @@ class AnalysisEngine:
 
     _model = None
     _tokenizer = None
+    _model_lock = threading.Lock()
 
     def __init__(self, model_dir: Optional[str] = None):
         self.model_dir = model_dir or MODEL_DIR
@@ -515,12 +517,13 @@ class AnalysisEngine:
     @classmethod
     def get_model_and_tokenizer(cls, model_dir: str):
         """Loads and caches the fine-tuned Legal-BERT model and tokenizer."""
-        if cls._model is None:
-            from transformers import AutoTokenizer, AutoModelForSequenceClassification
+        with cls._model_lock:
+            if cls._model is None:
+                from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
-            cls._tokenizer = AutoTokenizer.from_pretrained(model_dir)
-            cls._model = AutoModelForSequenceClassification.from_pretrained(model_dir)
-            cls._model.eval()
+                cls._tokenizer = AutoTokenizer.from_pretrained(model_dir)
+                cls._model = AutoModelForSequenceClassification.from_pretrained(model_dir)
+                cls._model.eval()
         return cls._model, cls._tokenizer
 
     def is_model_available(self) -> bool:

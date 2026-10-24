@@ -1091,7 +1091,19 @@ async def create_analysis_job_upload(
 
     content_bytes = await file.read()
     raw_name = contract_name or file.filename or "Contract.sol"
-    clean_name, clean_source = validate_file_upload(raw_name, content_bytes, MAX_SOURCE_LENGTH)
+    try:
+        clean_name, clean_source = validate_file_upload(raw_name, content_bytes, MAX_SOURCE_LENGTH)
+    except ValueError as val_err:
+        err_msg = str(val_err)
+        if ":" in err_msg:
+            code, msg = [x.strip() for x in err_msg.split(":", 1)]
+        else:
+            code, msg = "INVALID_FILE", err_msg
+        http_code = status.HTTP_413_CONTENT_TOO_LARGE if code == "PAYLOAD_TOO_LARGE" else status.HTTP_400_BAD_REQUEST
+        raise HTTPException(
+            status_code=http_code,
+            detail={"code": code, "message": msg}
+        )
     safe_name = sanitize_filename(clean_name)
 
     user_id = current_user["id"]

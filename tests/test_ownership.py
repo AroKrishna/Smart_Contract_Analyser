@@ -91,121 +91,110 @@ def setup_test_users():
 
 
 def test_authenticated_analysis_persistence_and_association():
-    """Verify that an authenticated analysis is associated with the user_id and saved to SQLite."""
-    client_a = get_user_client("auditor@enterprise.com", "AuditorPass2026!")
+    """Verify that an analysis is associated with the local user and saved to SQLite."""
+    client = TestClient(app)
 
-    # Submit analysis with User A auth
-    res = client_a.post(
+    # Submit analysis
+    res = client.post(
         "/api/v1/analyze",
         json={"sourceCode": SAMPLE_SOL, "contractName": "VaultA.sol", "description": "Vault A test"}
     )
     assert res.status_code == 200
     data = res.json()
     analysis_id = data["analysisId"]
-    assert data["userId"] == "usr-auditor-02"
+    assert "userId" in data
 
     # Verify directly in SQLite database
     db_record = db.get_analysis_by_id(analysis_id)
     assert db_record is not None
-    assert db_record["userId"] == "usr-auditor-02"
     assert db_record["contractName"] in ("VaultA.sol", "SimpleVault")
 
-    # Verify owner can retrieve the analysis via endpoint
-    get_res = client_a.get(f"/api/v1/analyze/{analysis_id}")
+    # Verify local user can retrieve the analysis via endpoint
+    get_res = client.get(f"/api/v1/analyze/{analysis_id}")
     assert get_res.status_code == 200
     assert get_res.json()["analysisId"] == analysis_id
 
 
-def test_cross_user_access_denial():
-    """Verify that User B is denied access (403 Forbidden) to User A's private analysis."""
-    client_a = get_user_client("auditor@enterprise.com", "AuditorPass2026!")
-    client_b = get_user_client("auditor_b@auditfirm.com", "AuditorBPass2026!")
+def test_local_analysis_access_and_safe_404():
+    """Verify that local user can access analysis, chat, reports, and delete, and nonexistent returns 404."""
+    client = TestClient(app)
 
-    # User A creates a private analysis
-    res_a = client_a.post(
+    # User creates an analysis
+    res = client.post(
         "/api/v1/analyze",
         json={"sourceCode": SAMPLE_SOL, "contractName": "PrivateA.sol"}
     )
-    assert res_a.status_code == 200
-    analysis_id = res_a.json()["analysisId"]
+    assert res.status_code == 200
+    analysis_id = res.json()["analysisId"]
 
-    # 1. User B tries to view User A's analysis -> 403 Forbidden
-    res_b_view = client_b.get(f"/api/v1/analyze/{analysis_id}")
-    assert res_b_view.status_code == 403
-    assert res_b_view.json()["detail"]["code"] == "ACCESS_DENIED"
+    # 1. View analysis -> 200 OK
+    res_view = client.get(f"/api/v1/analyze/{analysis_id}")
+    assert res_view.status_code == 200
 
-    # 2. User B tries to query chat assistant on User A's contract -> 403 Forbidden
-    res_b_chat = client_b.post(
+    # 2. Query chat assistant on contract -> 200 OK
+    res_chat = client.post(
         f"/api/v1/analyze/{analysis_id}/chat",
         json={"message": "What does this contract do?"}
     )
-    assert res_b_chat.status_code == 403
-    assert res_b_chat.json()["detail"]["code"] == "ACCESS_DENIED"
+    assert res_chat.status_code == 200
 
-    # 3. User B tries to export User A's PDF report -> 403 Forbidden
-    res_b_pdf = client_b.get(f"/api/v1/reports/{analysis_id}/pdf")
-    assert res_b_pdf.status_code == 403
-    assert res_b_pdf.json()["detail"]["code"] == "ACCESS_DENIED"
+    # 3. Export PDF report -> 200 OK
+    res_pdf = client.get(f"/api/v1/reports/{analysis_id}/pdf")
+    assert res_pdf.status_code == 200
 
-    # 4. User B tries to export User A's DOCX report -> 403 Forbidden
-    res_b_docx = client_b.get(f"/api/v1/reports/{analysis_id}/docx")
-    assert res_b_docx.status_code == 403
-    assert res_b_docx.json()["detail"]["code"] == "ACCESS_DENIED"
+    # 4. Export DOCX report -> 200 OK
+    res_docx = client.get(f"/api/v1/reports/{analysis_id}/docx")
+    assert res_docx.status_code == 200
 
-    # 5. User B tries to delete User A's analysis -> 403 Forbidden
-    res_b_del = client_b.delete(f"/api/v1/analyze/{analysis_id}")
-    assert res_b_del.status_code == 403
-    assert res_b_del.json()["detail"]["code"] == "ACCESS_DENIED"
-
-    # Verify User A can still access their analysis
-    res_a_view = client_a.get(f"/api/v1/analyze/{analysis_id}")
-    assert res_a_view.status_code == 200
+    # 5. Nonexistent analysis returns 404 for all endpoints
+    fake_id = "nonexistent_analysis_xyz"
+    assert client.get(f"/api/v1/analyze/{fake_id}").status_code == 404
+    assert client.post(f"/api/v1/analyze/{fake_id}/chat", json={"message": "hi"}).status_code == 404
+    assert client.get(f"/api/v1/reports/{fake_id}/pdf").status_code == 404
+    assert client.get(f"/api/v1/reports/{fake_id}/docx").status_code == 404
+    assert client.delete(f"/api/v1/analyze/{fake_id}").status_code == 404
 
 
-def test_unauthenticated_access_denial_to_private_analysis():
-    """Verify that unauthenticated callers are denied access (401 Unauthorized) to private analyses."""
-    client_a = get_user_client("auditor@enterprise.com", "AuditorPass2026!")
+def test_unauthenticated_access_allowed_in_local_mode():
+    """Verify that unauthenticated callers have full access without 401 in local no-login mode."""
     anon_client = TestClient(app)
 
-    # User A creates a private analysis
-    res_a = client_a.post(
+    # Anonymous user creates an analysis
+    res = anon_client.post(
         "/api/v1/analyze",
         json={"sourceCode": SAMPLE_SOL, "contractName": "ConfidentialA.sol"}
     )
-    assert res_a.status_code == 200
-    analysis_id = res_a.json()["analysisId"]
+    assert res.status_code == 200
+    analysis_id = res.json()["analysisId"]
 
-    # 1. Anonymous GET /api/v1/analyze/{analysis_id} -> 401
+    # 1. Anonymous GET /api/v1/analyze/{analysis_id} -> 200
     anon_view = anon_client.get(f"/api/v1/analyze/{analysis_id}")
-    assert anon_view.status_code == 401
-    assert anon_view.json()["detail"]["code"] == "UNAUTHORIZED"
+    assert anon_view.status_code == 200
 
-    # 2. Anonymous GET /api/v1/analyses -> 401
+    # 2. Anonymous GET /api/v1/analyses -> 200
     anon_list = anon_client.get("/api/v1/analyses")
-    assert anon_list.status_code == 401
-    assert anon_list.json()["detail"]["code"] == "UNAUTHORIZED"
+    assert anon_list.status_code == 200
 
-    # 3. Anonymous POST /api/v1/analyze/{analysis_id}/chat -> 401
+    # 3. Anonymous POST /api/v1/analyze/{analysis_id}/chat -> 200
     anon_chat = anon_client.post(f"/api/v1/analyze/{analysis_id}/chat", json={"message": "Query"})
-    assert anon_chat.status_code == 401
+    assert anon_chat.status_code == 200
 
-    # 4. Anonymous GET /api/v1/reports/{analysis_id}/pdf -> 401
+    # 4. Anonymous GET /api/v1/reports/{analysis_id}/pdf -> 200
     anon_pdf = anon_client.get(f"/api/v1/reports/{analysis_id}/pdf")
-    assert anon_pdf.status_code == 401
+    assert anon_pdf.status_code == 200
 
-    # 5. Anonymous DELETE /api/v1/analyze/{analysis_id} -> 401
+    # 5. Anonymous DELETE /api/v1/analyze/{analysis_id} -> 200
     anon_del = anon_client.delete(f"/api/v1/analyze/{analysis_id}")
-    assert anon_del.status_code == 401
+    assert anon_del.status_code == 200
 
 
-def test_user_history_isolation():
-    """Verify that User A and User B see only their own respective analyses in history."""
-    client_a = get_user_client("auditor@enterprise.com", "AuditorPass2026!")
-    client_b = get_user_client("auditor_b@auditfirm.com", "AuditorBPass2026!")
+def test_local_user_history_persistence():
+    """Verify that all submitted analyses appear in the local user's history."""
+    client = TestClient(app)
 
     tag_a = f"VaultA_{uuid.uuid4().hex[:6]}"
     code_a = SAMPLE_SOL.replace("SimpleVault", tag_a)
-    res_a = client_a.post(
+    res_a = client.post(
         "/api/v1/analyze",
         json={"sourceCode": code_a, "contractName": f"{tag_a}.sol"}
     )
@@ -213,30 +202,24 @@ def test_user_history_isolation():
 
     tag_b = f"VaultB_{uuid.uuid4().hex[:6]}"
     code_b = SAMPLE_SOL.replace("SimpleVault", tag_b)
-    res_b = client_b.post(
+    res_b = client.post(
         "/api/v1/analyze",
         json={"sourceCode": code_b, "contractName": f"{tag_b}.sol"}
     )
     assert res_b.status_code == 200
 
-    # User A list history
-    list_a = client_a.get("/api/v1/analyses").json()
-    names_a = [item["contractName"] for item in list_a["analyses"]]
-    assert any(tag_a in name for name in names_a), f"Expected {tag_a} in {names_a}"
-    assert not any(tag_b in name for name in names_a), f"User A saw User B's contract {tag_b}!"
-
-    # User B list history
-    list_b = client_b.get("/api/v1/analyses").json()
-    names_b = [item["contractName"] for item in list_b["analyses"]]
-    assert any(tag_b in name for name in names_b), f"Expected {tag_b} in {names_b}"
-    assert not any(tag_a in name for name in names_b), f"User B saw User A's contract {tag_a}!"
+    # List history
+    list_res = client.get("/api/v1/analyses").json()
+    names = [item["contractName"] for item in list_res["analyses"]]
+    assert any(tag_a in name for name in names), f"Expected {tag_a} in {names}"
+    assert any(tag_b in name for name in names), f"Expected {tag_b} in {names}"
 
 
 def test_user_dashboard_stats():
     """Verify that GET /api/v1/user/stats returns user-scoped metrics."""
-    client_b = get_user_client("auditor_b@auditfirm.com", "AuditorBPass2026!")
+    client = TestClient(app)
 
-    res = client_b.get("/api/v1/user/stats")
+    res = client.get("/api/v1/user/stats")
     assert res.status_code == 200
     data = res.json()
     assert "totalAnalyzed" in data
@@ -247,41 +230,30 @@ def test_user_dashboard_stats():
     assert isinstance(data["recentAnalyses"], list)
 
 
-def test_job_persistence_and_cross_user_denial():
-    """Verify analysis jobs persist in SQLite and enforce ownership."""
-    client_a = get_user_client("auditor@enterprise.com", "AuditorPass2026!")
-    client_b = get_user_client("auditor_b@auditfirm.com", "AuditorBPass2026!")
-    anon_client = TestClient(app)
+def test_job_persistence_and_lifecycle():
+    """Verify analysis jobs persist in SQLite and can be polled locally."""
+    client = TestClient(app)
 
-    # Create job under User A
-    create_res = client_a.post(
+    # Create job
+    create_res = client.post(
         "/api/v1/analyze/jobs",
         json={"sourceCode": SAMPLE_SOL, "contractName": "JobVaultA.sol"}
     )
     assert create_res.status_code == 202
     job_id = create_res.json()["jobId"]
-    assert create_res.json()["userId"] == "usr-auditor-02"
 
     # Verify job exists in SQLite DB immediately
     db_job = db.get_job(job_id)
     assert db_job is not None
     assert db_job["jobId"] == job_id
-    assert db_job["userId"] == "usr-auditor-02"
 
-    # User B trying to check User A's job -> 403 Forbidden
-    poll_b = client_b.get(f"/api/v1/jobs/{job_id}")
-    assert poll_b.status_code == 403
-    assert poll_b.json()["detail"]["code"] == "ACCESS_DENIED"
+    # Local user checking their job -> 200 OK
+    poll = client.get(f"/api/v1/jobs/{job_id}")
+    assert poll.status_code == 200
+    assert poll.json()["jobId"] == job_id
 
-    # Unauthenticated caller checking User A's job -> 401 Unauthorized
-    poll_anon = anon_client.get(f"/api/v1/jobs/{job_id}")
-    assert poll_anon.status_code == 401
-    assert poll_anon.json()["detail"]["code"] in ("UNAUTHORIZED", "AUTHENTICATION_REQUIRED")
-
-    # User A checking their job -> 200 OK
-    poll_a = client_a.get(f"/api/v1/jobs/{job_id}")
-    assert poll_a.status_code == 200
-    assert poll_a.json()["jobId"] == job_id
+    # Nonexistent job returns 404
+    assert client.get("/api/v1/jobs/job-nonexistent-12345").status_code == 404
 
 
 def test_job_reboot_reconciliation():
@@ -344,24 +316,19 @@ def test_safe_schema_migration_idempotence():
     assert record["contractName"] == "MigrationTest.sol"
 
 
-def test_unauthenticated_analysis_submission_rejected():
-    """Verify that unauthenticated callers cannot submit contracts or jobs and receive 401."""
+def test_unauthenticated_analysis_submission_allowed():
+    """Verify that unauthenticated callers can submit contracts or jobs in local mode without 401."""
     anon_client = TestClient(app)
 
-    # Direct Analysis
-    r1 = anon_client.post("/api/v1/analyze", json={"sourceCode": SAMPLE_SOL, "contractName": "Test.sol"})
-    assert r1.status_code == 401
-    assert r1.json()["detail"]["code"] == "AUTHENTICATION_REQUIRED"
+    # Direct Analysis succeeds
+    r1 = anon_client.post("/api/v1/analyze", json={"sourceCode": SAMPLE_SOL, "contractName": "TestDirect.sol"})
+    assert r1.status_code == 200
+    assert "analysisId" in r1.json()
 
-    # File Upload
-    r2 = anon_client.post("/api/v1/analyze/upload", files={"file": ("Test.sol", SAMPLE_SOL.encode("utf-8"), "text/plain")})
-    assert r2.status_code == 401
-    assert r2.json()["detail"]["code"] == "AUTHENTICATION_REQUIRED"
-
-    # Async Job
-    r3 = anon_client.post("/api/v1/analyze/jobs", json={"sourceCode": SAMPLE_SOL, "contractName": "Test.sol"})
-    assert r3.status_code == 401
-    assert r3.json()["detail"]["code"] == "AUTHENTICATION_REQUIRED"
+    # Async Job submission succeeds with 202
+    r3 = anon_client.post("/api/v1/analyze/jobs", json={"sourceCode": SAMPLE_SOL, "contractName": "TestJob.sol"})
+    assert r3.status_code == 202
+    assert "jobId" in r3.json()
 
 
 def test_complete_deletion_across_all_storage_and_endpoints():

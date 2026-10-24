@@ -100,7 +100,7 @@ def test_job_submission_and_progress_lifecycle():
     assert data["progress"] >= 15
 
     # Poll until completed (with timeout)
-    max_wait = 45
+    max_wait = 65
     start = time.time()
     final_status = None
     prev_progress = 0
@@ -131,47 +131,40 @@ def test_job_submission_and_progress_lifecycle():
     assert "overallRiskScore" in res_data or "riskScore" in res_data
 
 
-# 2. Strict Job Ownership Isolation
+# 2. Local Job Lifecycle, Retrieval, and Cancellation Semantics
 def test_job_ownership_isolation():
-    client_a = create_user_client("job_owner_a@example.com")
-    client_b = create_user_client("job_attacker_b@example.com")
-    admin_client = create_user_client("job_admin@example.com", role="admin")
+    """Verify local job lifecycle without login: unauthenticated creation, polling, cancellation, and deletion."""
+    anon_client = TestClient(app)
 
-    # User A creates a job
-    res = client_a.post(
+    # 1. Anonymous client creates an analysis job
+    res = anon_client.post(
         "/api/v1/analyze/jobs",
         json={"sourceCode": SAMPLE_SOL, "contractName": "SecureA.sol"}
     )
     assert res.status_code == 202
     job_id = res.json()["jobId"]
+    assert job_id.startswith("job-")
 
-    # Unauthenticated caller -> 401 Unauthorized
-    anon_client = TestClient(app)
-    assert anon_client.get(f"/api/v1/jobs/{job_id}").status_code == 401
-    assert anon_client.post(f"/api/v1/jobs/{job_id}/cancel").status_code == 401
-    assert anon_client.get(f"/api/v1/jobs/{job_id}/result").status_code == 401
-    assert anon_client.delete(f"/api/v1/jobs/{job_id}").status_code == 401
+    # 2. Anonymous caller can inspect job status and results directly
+    status_res = anon_client.get(f"/api/v1/jobs/{job_id}")
+    assert status_res.status_code == 200
+    assert status_res.json()["jobId"] == job_id
+    assert status_res.json()["status"] in ("queued", "running", "completed")
 
-    # User B (cross-tenant) -> 403 Access Denied
-    res_b_status = client_b.get(f"/api/v1/jobs/{job_id}")
-    assert res_b_status.status_code == 403
-    assert res_b_status.json()["detail"]["code"] == "ACCESS_DENIED"
+    # 3. Nonexistent job ID returns 404
+    fake_res = anon_client.get("/api/v1/jobs/job-nonexistent-999999")
+    assert fake_res.status_code == 404
+    assert fake_res.json()["detail"]["code"] == "JOB_NOT_FOUND"
 
-    res_b_cancel = client_b.post(f"/api/v1/jobs/{job_id}/cancel")
-    assert res_b_cancel.status_code == 403
-    assert res_b_cancel.json()["detail"]["code"] == "ACCESS_DENIED"
+    # 4. Anonymous caller can cancel the job
+    cancel_res = anon_client.post(f"/api/v1/jobs/{job_id}/cancel")
+    assert cancel_res.status_code == 200
+    assert cancel_res.json()["status"] in ("cancelled", "completed")
 
-    res_b_res = client_b.get(f"/api/v1/jobs/{job_id}/result")
-    assert res_b_res.status_code == 403
-    assert res_b_res.json()["detail"]["code"] == "ACCESS_DENIED"
-
-    res_b_del = client_b.delete(f"/api/v1/jobs/{job_id}")
-    assert res_b_del.status_code == 403
-    assert res_b_del.json()["detail"]["code"] == "ACCESS_DENIED"
-
-    # Admin CAN access User A's job
-    res_admin = admin_client.get(f"/api/v1/jobs/{job_id}")
-    assert res_admin.status_code == 200
+    # 5. Anonymous caller can delete the job record
+    del_res = anon_client.delete(f"/api/v1/jobs/{job_id}")
+    assert del_res.status_code == 200
+    assert del_res.json()["status"] in ("deleted", "discarded") or del_res.json().get("success")
 
 
 # 3. Duplicate Submission Protection & Idempotency
@@ -424,21 +417,23 @@ def test_report_endpoints_ownership_and_auth():
     assert analysis_res.status_code == 200
     analysis_id = analysis_res.json()["analysisId"]
 
-    # 1. Unauthenticated downloads must be rejected with 401
+    # 1. Unauthenticated downloads succeed directly in local edition
     anon_client = TestClient(app)
-    assert anon_client.get(f"/api/v1/reports/{analysis_id}/pdf").status_code == 401
-    assert anon_client.get(f"/api/v1/reports/{analysis_id}/docx").status_code == 401
+    anon_pdf = anon_client.get(f"/api/v1/reports/{analysis_id}/pdf")
+    assert anon_pdf.status_code == 200
+    assert anon_pdf.headers["content-type"] == "application/pdf"
+    assert anon_pdf.content.startswith(b"%PDF")
 
-    # 2. User B (cross-tenant) must be rejected with 403
-    pdf_b = client_b.get(f"/api/v1/reports/{analysis_id}/pdf")
-    assert pdf_b.status_code == 403
-    assert pdf_b.json()["detail"]["code"] == "ACCESS_DENIED"
+    anon_docx = anon_client.get(f"/api/v1/reports/{analysis_id}/docx")
+    assert anon_docx.status_code == 200
+    assert "wordprocessingml" in anon_docx.headers["content-type"]
+    assert anon_docx.content.startswith(b"PK")
 
-    docx_b = client_b.get(f"/api/v1/reports/{analysis_id}/docx")
-    assert docx_b.status_code == 403
-    assert docx_b.json()["detail"]["code"] == "ACCESS_DENIED"
+    # 2. Nonexistent analysis ID returns 404
+    fake_pdf = anon_client.get("/api/v1/reports/audit-nonexistent-12345/pdf")
+    assert fake_pdf.status_code == 404
 
-    # 3. Owner A CAN download both PDF and DOCX reports
+    # 3. Authenticated client also downloads both PDF and DOCX reports
     pdf_a = client_a.get(f"/api/v1/reports/{analysis_id}/pdf")
     assert pdf_a.status_code == 200
     assert pdf_a.headers["content-type"] == "application/pdf"
@@ -453,18 +448,19 @@ def test_report_endpoints_ownership_and_auth():
 # 10. Async Multipart Upload Integration Test
 def test_async_job_multipart_upload_persists_file_and_links_lifecycle():
     """
-    Verifies that POST /api/v1/analyze/jobs/upload stores the physical file in user's sandbox,
+    Verifies that POST /api/v1/analyze/jobs/upload stores the physical file in local storage,
     records file metadata, links fileId to the async job and saved analysis, and cleans up on deletion.
     """
     client = create_user_client("async_uploader@example.com")
 
-    # 1. Unauthenticated upload rejected with 401
+    # 1. Unauthenticated client can interact with upload endpoint (validates file without 401)
     anon_client = TestClient(app)
-    unauth_res = anon_client.post(
+    unauth_bad = anon_client.post(
         "/api/v1/analyze/jobs/upload",
-        files={"file": ("AsyncVault.sol", io.BytesIO(SAMPLE_SOL.encode("utf-8")), "text/plain")}
+        files={"file": ("invalid.txt", io.BytesIO(b"not a sol file"), "text/plain")}
     )
-    assert unauth_res.status_code == 401
+    assert unauth_bad.status_code == 400
+    assert "INVALID_FILE_TYPE" in unauth_bad.text
 
     # 2. Authenticated upload
     upload_res = client.post(

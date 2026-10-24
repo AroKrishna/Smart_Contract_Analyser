@@ -7,7 +7,7 @@
 [![Vite](https://img.shields.io/badge/Vite-8-purple.svg)](https://vite.dev/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-emerald.svg)](https://fastapi.tiangolo.com/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-red.svg)](https://pytorch.org/)
-[![License](https://img.shields.io/badge/License-All_Rights_Reserved-lightgrey.svg)](#-license--rights)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ---
 
@@ -23,11 +23,6 @@ This application runs **entirely on your own computer**:
 - **Legal-BERT neural inference** runs locally on your CPU/GPU.
 - All uploaded `.sol` files, analysis history, SQLite database records, and generated PDF/DOCX reports remain strictly on your local disk.
 - **Zero login requirement**: No registration, no passwords, no session cookies, and no cloud accounts or external database connections.
-
-> [!IMPORTANT]
-> **Repository Access & Cloning Note:**
-> - If this repository is currently **private**, the repository owner must first add your GitHub username under **Repository Settings ➔ Collaborators ➔ Add people** before you can clone it.
-> - Once the repository is made **public**, anyone can clone it directly without special permissions.
 
 ---
 
@@ -84,14 +79,12 @@ Before running the project on your machine:
 
 Follow these steps in order to install and launch the application on your computer.
 
-### Step 1: Clone the Private Repository
+### Step 1: Clone the Official Repository
 
 ```bash
-git clone https://github.com/AroKrishna/Smart_Contract_Analyser_Private.git
-cd Smart_Contract_Analyser_Private
+git clone https://github.com/AroKrishna/Smart_Contract_Analyser.git
+cd Smart_Contract_Analyser
 ```
-
-*(Ensure the repository owner has granted your GitHub account access before cloning).*
 
 ---
 
@@ -286,11 +279,13 @@ npm run build
 
 ## 🔬 Scientific Disclosure & Model Limitations
 
-1. **Small-Scale Training Distribution**:
-   - The fine-tuned Legal-BERT multi-category classifier is trained on a frozen canonical dataset of 58 smart contracts (38 real-source, 20 synthetic training instances).
-   - On strictly isolated held-out test contracts, natural prevalence of certain rare hazards (Privacy, Liability, and Payment / Financial) is low. For zero-support categories, metrics are transparently marked as inconclusive rather than presenting fabricated accuracy numbers.
+1. **Small-Scale Training Distribution & Evaluation Realism**:
+   - The fine-tuned Legal-BERT multi-category classifier was trained on a small canonical dataset of 58 smart contracts (38 real-source, 20 synthetic training instances).
+   - On strictly isolated held-out test contracts ($N=7$), natural prevalence of certain rare hazards (*Privacy*, *Liability*, and *Payment / Financial*) is zero. For these zero-support categories, metrics are transparently marked as inconclusive.
+   - For categories with test support (*Termination* with $N=3$ positives, *Legal Compliance* with $N=4$ positives), predicted probabilities with the uncalibrated default 0.50 threshold fell below 0.50, yielding precision, recall, and F1 metrics of 0.00 (with specificity of 1.00).
+   - **Academic Purpose**: This system is an experimental decision-support research prototype. Outputs are heuristic indicators and must **never** be represented as reliable, clinically validated, or production-grade legal advice.
 2. **Deterministic Fallback Transparency**:
-   - The platform never fabricates model verdicts. When the model is absent, the system transparently indicates `model_unavailable` with exact dataset readiness diagnostics.
+   - The platform never fabricates model verdicts. When the model weights are absent, the system transparently indicates `model_unavailable` with exact dataset readiness diagnostics rather than silently substituting mock predictions.
 3. **Interpretability Scope**:
    - SHAP values and LIME weights are computed over normalized AST code tokens. They highlight clauses statistically correlated with operational hazards, but do not replace comprehensive human code review.
 
@@ -298,5 +293,6 @@ npm run build
 
 ## 📄 License & Rights
 
-An open-source license file has not yet been selected or committed to this repository by the project author. All rights are reserved by default. Public visibility on GitHub allows cloning and running the application for educational and personal review, but does not automatically grant commercial redistribution, sublicensing, or derivative rights until an official license is provided.
+- **Project-Owned Code**: Licensed under the **MIT License**. See [LICENSE](LICENSE) for full terms. Copyright (c) 2026 AroKrishna.
+- **Third-Party Materials**: Pre-trained foundation weights (`nlpaueb/legal-bert-base-uncased`, Apache-2.0), smart contract code extracts, and third-party libraries retain their respective upstream licenses. See [ATTRIBUTION.md](ATTRIBUTION.md) for full notices.
 
