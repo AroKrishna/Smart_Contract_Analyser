@@ -10,6 +10,7 @@ Conforms to:
 import os
 import sys
 import io
+import re
 import time
 import uuid
 import logging
@@ -252,6 +253,60 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["x-analysis-disclaimer", "x-engine-type", "x-persistence-note"],
 )
+
+# Local security middleware: validates Host header against DNS rebinding
+# and protects state-changing endpoints from unauthorized external browser origins.
+LOCAL_HOSTS = {"localhost", "127.0.0.1", "::1", "testclient", "testserver"}
+ALLOWED_LOCAL_ORIGIN_REGEX = re.compile(r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$", re.IGNORECASE)
+
+@app.middleware("http")
+async def local_security_middleware(request: Request, call_next):
+    # 1. Host header validation to prevent DNS rebinding
+    raw_host = request.headers.get("host", "").split(":")[0].strip().lower()
+    if raw_host and raw_host not in LOCAL_HOSTS and not raw_host.endswith(".localhost"):
+        allowed_hosts = {orig.split("://")[-1].split(":")[0].lower() for orig in cors_origins if orig != "*"}
+        if raw_host not in allowed_hosts:
+            return JSONResponse(
+                status_code=status.HTTP_403_FORBIDDEN,
+                content={
+                    "code": "INVALID_HOST",
+                    "message": f"Host '{raw_host}' is not permitted. This application only accepts local loopback connections."
+                }
+            )
+
+    # 2. Browser cross-site protection for state-changing requests
+    if request.method in ("POST", "PUT", "DELETE", "PATCH"):
+        origin = request.headers.get("origin")
+        sec_fetch_site = request.headers.get("sec-fetch-site")
+
+        # If origin header is present (sent by browsers on cross-origin requests)
+        if origin:
+            is_allowed = (
+                origin in cors_origins or
+                bool(ALLOWED_LOCAL_ORIGIN_REGEX.match(origin))
+            )
+            if not is_allowed:
+                return JSONResponse(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    content={
+                        "code": "CROSS_SITE_REQUEST_BLOCKED",
+                        "message": f"Cross-site request from untrusted origin '{origin}' is blocked to protect your local environment."
+                    }
+                )
+
+        # If Sec-Fetch-Site indicates cross-site and origin was untrusted
+        if sec_fetch_site == "cross-site":
+            if not origin or not (origin in cors_origins or bool(ALLOWED_LOCAL_ORIGIN_REGEX.match(origin))):
+                return JSONResponse(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    content={
+                        "code": "CROSS_SITE_REQUEST_BLOCKED",
+                        "message": "Cross-site request blocked to protect your local environment."
+                    }
+                )
+
+    return await call_next(request)
+
 
 
 

@@ -445,5 +445,40 @@ def test_no_login_local_analysis_submission_and_workflow():
     assert r4.status_code == 200
 
 
+def test_cross_site_origin_protection():
+    """Verify state-changing requests from untrusted external web origins are blocked (403)."""
+    anon_client = TestClient(app)
+
+    # 1. Untrusted external origin attempting to trigger analysis is blocked
+    res_evil = anon_client.post(
+        "/api/v1/analyze",
+        json={"sourceCode": SAMPLE_VALID_CONTRACT, "contractName": "Evil.sol"},
+        headers={"Origin": "https://malicious-website.com"}
+    )
+    assert res_evil.status_code == 403
+    assert res_evil.json()["code"] == "CROSS_SITE_REQUEST_BLOCKED"
+
+    # 2. Untrusted origin attempting deletion is blocked
+    res_del = anon_client.delete(
+        "/api/v1/analyze/audit-fake-123",
+        headers={"Origin": "http://evil-attacker.org"}
+    )
+    assert res_del.status_code == 403
+    assert res_del.json()["code"] == "CROSS_SITE_REQUEST_BLOCKED"
+
+    # 3. Trusted local origin is permitted
+    res_local = anon_client.post(
+        "/api/v1/analyze",
+        json={"sourceCode": SAMPLE_VALID_CONTRACT, "contractName": "SafeLocal.sol"},
+        headers={"Origin": "http://localhost:5173"}
+    )
+    assert res_local.status_code == 200
+    assert "analysisId" in res_local.json()
 
 
+def test_host_header_dns_rebinding_protection():
+    """Verify requests with untrusted Host headers are rejected (403)."""
+    anon_client = TestClient(app)
+    res = anon_client.get("/health", headers={"Host": "attacker-dns-rebound.com"})
+    assert res.status_code == 403
+    assert res.json()["code"] == "INVALID_HOST"

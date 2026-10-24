@@ -7,7 +7,7 @@
 [![Vite](https://img.shields.io/badge/Vite-8-purple.svg)](https://vite.dev/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-emerald.svg)](https://fastapi.tiangolo.com/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-red.svg)](https://pytorch.org/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![License](https://img.shields.io/badge/License-All_Rights_Reserved-lightgrey.svg)](#-license--rights)
 
 ---
 
@@ -25,7 +25,9 @@ This application runs **entirely on your own computer**:
 - **Zero login requirement**: No registration, no passwords, no session cookies, and no cloud accounts or external database connections.
 
 > [!IMPORTANT]
-> **Repository Access Note:** This GitHub repository (`https://github.com/AroKrishna/Smart_Contract_Analyser_Private`) is **private**. To allow a friend or collaborator to clone this project on their laptop, they must first be added as a collaborator under your GitHub repository settings (**Settings ➔ Collaborators ➔ Add people**).
+> **Repository Access & Cloning Note:**
+> - If this repository is currently **private**, the repository owner must first add your GitHub username under **Repository Settings ➔ Collaborators ➔ Add people** before you can clone it.
+> - Once the repository is made **public**, anyone can clone it directly without special permissions.
 
 ---
 
@@ -129,6 +131,9 @@ pip install -r requirements.txt
 
 The neural analysis engine requires the fine-tuned Legal-BERT model weights (`model.safetensors`, ~418 MB). Model binaries are excluded from Git to keep the repository lightweight.
 
+> [!NOTE]
+> **Internet vs. Offline Execution**: Installing Python and npm packages and downloading the model weights require an active internet connection. Once dependencies and model weights are downloaded to your machine, the application operates **100% locally and completely offline** without requiring any internet access.
+
 Run the built-in setup script to automatically download the verified release asset and check its SHA-256 hash:
 
 ```bash
@@ -218,7 +223,7 @@ Open your browser at:
 
 ---
 
-## 📁 Local Data Storage & Privacy
+## 📁 Local Data Storage, Privacy & Security
 
 All application state is stored locally on your machine and never leaves your computer:
 
@@ -228,6 +233,12 @@ All application state is stored locally on your machine and never leaves your co
 | **Uploaded Contracts** | `backend/data/storage/local_user/` | Physical storage directory for uploaded `.sol` files. |
 | **Model Weights** | `analysis/models/legal_bert_v3.3.0/model.safetensors` | Neural weights for the fine-tuned classifier. |
 | **Generated Reports** | Dynamically streamed | PDF and DOCX reports are generated in-memory on demand. |
+
+### Browser Security Protection (No-Login Safeguards)
+Because this application runs without passwords or cloud accounts on your local computer, the backend incorporates automatic **Host & Origin Protection**:
+- **Loopback Binding**: The backend listens strictly on loopback (`127.0.0.1`), never exposing open ports on your local network.
+- **DNS Rebinding Defense**: Requests with forged or untrusted `Host` headers are automatically rejected (HTTP 403).
+- **Cross-Site Attack Prevention**: External websites running in your browser cannot issue state-changing requests (`POST`, `DELETE`, etc.) or drive-by submissions against your local application. State-changing calls must originate from your local frontend.
 
 ### How to Reset Local Data
 - **In-App Reset**: Click **Delete** next to any audit in `/history` to remove it cleanly.
@@ -285,6 +296,7 @@ npm run build
 
 ---
 
-## 📄 License
+## 📄 License & Rights
 
-This project is licensed under the MIT License.
+An open-source license file has not yet been selected or committed to this repository by the project author. All rights are reserved by default. Public visibility on GitHub allows cloning and running the application for educational and personal review, but does not automatically grant commercial redistribution, sublicensing, or derivative rights until an official license is provided.
+
