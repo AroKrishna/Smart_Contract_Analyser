@@ -737,15 +737,21 @@ def get_file_record_by_analysis_id(analysis_id: str, user_id: Optional[str] = No
     }
 
 
-def list_user_files(user_id: str, limit: int = 50) -> List[Dict[str, Any]]:
-    """Lists stored files for a user ordered by creation date."""
+def list_user_files(user_id: Optional[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
+    """Lists stored files for local storage (or scoped to user_id if provided) ordered by creation date."""
     init_db(reconcile=False)
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute(
-        "SELECT * FROM stored_files WHERE user_id = ? ORDER BY created_at DESC LIMIT ?",
-        (user_id, limit)
-    )
+    if user_id:
+        cursor.execute(
+            "SELECT * FROM stored_files WHERE user_id = ? ORDER BY created_at DESC LIMIT ?",
+            (user_id, limit)
+        )
+    else:
+        cursor.execute(
+            "SELECT * FROM stored_files ORDER BY created_at DESC LIMIT ?",
+            (limit,)
+        )
     rows = cursor.fetchall()
     conn.close()
     return [
@@ -853,21 +859,30 @@ def cleanup_expired_records(retention_days: int = 30) -> Dict[str, int]:
     }
 
 
-def get_user_dashboard_stats(user_id: str) -> Dict[str, Any]:
-    """Computes summary statistics specifically for the authenticated user's audits."""
+def get_user_dashboard_stats(user_id: Optional[str] = None) -> Dict[str, Any]:
+    """Computes summary statistics specifically for local audits (or scoped to user_id if provided)."""
     init_db(reconcile=False)
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT COUNT(*) AS total, AVG(risk_score) AS avg_score FROM analyses WHERE user_id = ?", (user_id,))
+    if user_id:
+        cursor.execute("SELECT COUNT(*) AS total, AVG(risk_score) AS avg_score FROM analyses WHERE user_id = ?", (user_id,))
+    else:
+        cursor.execute("SELECT COUNT(*) AS total, AVG(risk_score) AS avg_score FROM analyses")
     row = cursor.fetchone()
     total = row["total"] or 0
     avg_score = round(row["avg_score"] or 0, 1)
 
-    cursor.execute("SELECT COUNT(*) AS high_count FROM analyses WHERE user_id = ? AND risk_level IN ('High', 'Critical')", (user_id,))
+    if user_id:
+        cursor.execute("SELECT COUNT(*) AS high_count FROM analyses WHERE user_id = ? AND risk_level IN ('High', 'Critical')", (user_id,))
+    else:
+        cursor.execute("SELECT COUNT(*) AS high_count FROM analyses WHERE risk_level IN ('High', 'Critical')")
     high_count = cursor.fetchone()["high_count"] or 0
 
-    cursor.execute("SELECT COUNT(*) AS low_count FROM analyses WHERE user_id = ? AND risk_level = 'Low'", (user_id,))
+    if user_id:
+        cursor.execute("SELECT COUNT(*) AS low_count FROM analyses WHERE user_id = ? AND risk_level = 'Low'", (user_id,))
+    else:
+        cursor.execute("SELECT COUNT(*) AS low_count FROM analyses WHERE risk_level = 'Low'")
     low_count = cursor.fetchone()["low_count"] or 0
 
     conn.close()

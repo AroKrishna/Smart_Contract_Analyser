@@ -19,7 +19,6 @@ import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 
 const Dashboard = () => {
-  const { user, isAuthenticated } = useAuth();
   const [stats, setStats] = useState(null);
   const [recentAnalyses, setRecentAnalyses] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -28,12 +27,6 @@ const Dashboard = () => {
     let isCancelled = false;
 
     async function fetchStats() {
-      if (!isAuthenticated) {
-        setStats(null);
-        setRecentAnalyses([]);
-        return;
-      }
-
       setLoading(true);
       try {
         const data = await api.getUserStats();
@@ -44,7 +37,7 @@ const Dashboard = () => {
           }
         }
       } catch (err) {
-        console.warn('Failed to load user dashboard stats:', err);
+        console.warn('Failed to load local dashboard stats:', err);
       } finally {
         if (!isCancelled) setLoading(false);
       }
@@ -55,12 +48,15 @@ const Dashboard = () => {
     return () => {
       isCancelled = true;
     };
-  }, [isAuthenticated]);
+  }, []);
 
-  const activeStats = stats || mockDashboardStats;
-  const activeRecent = (recentAnalyses && recentAnalyses.length > 0)
-    ? recentAnalyses
-    : (isAuthenticated && stats ? [] : mockContracts);
+  const activeStats = stats || {
+    totalAnalyzed: 0,
+    averageRiskScore: 0,
+    highRiskCount: 0,
+    lowRiskCount: 0,
+  };
+  const activeRecent = recentAnalyses || [];
 
   return (
     <div className="space-y-8">
@@ -71,14 +67,14 @@ const Dashboard = () => {
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold text-blue-400 font-mono uppercase tracking-wider">
-              Decision Support Center
+              Local Workspace
             </span>
             <span className="px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-mono">
-              Legal-BERT v3.3.0 (Experimental)
+              Legal-BERT v3.3.0
             </span>
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
             <span className="text-xs text-slate-400">
-              {user ? `Auditor: ${user.fullName || user.email}` : 'Pre-Deployment Auditing'}
+              Offline Single-User Edition
             </span>
           </div>
           <h2 className="text-2xl font-bold tracking-tight text-slate-100">

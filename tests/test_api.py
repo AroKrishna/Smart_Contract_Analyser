@@ -190,22 +190,15 @@ def test_get_analysis_by_id_seeded():
 
 
 def test_list_analyses_history():
-    """Verify GET /api/v1/analyses requires authentication and retrieves user-owned history with filters."""
-    # 1. Unauthenticated request must return 401 Unauthorized
+    """Verify GET /api/v1/analyses retrieves local history without requiring login."""
+    # 1. Unauthenticated request retrieves local history directly
     unauth_response = TestClient(app).get("/api/v1/analyses?risk_level=All")
-    assert unauth_response.status_code == 401
+    assert unauth_response.status_code == 200
+    data = unauth_response.json()
+    assert "total" in data
+    assert "analyses" in data
 
-    # 2. Login as admin user
-    login_payload = {
-        "email": "admin@legal-ai.io",
-        "password": "AdminPass2026!"
-    }
-    auth_res = client.post("/api/v1/auth/login", json=login_payload)
-    assert auth_res.status_code == 200
-    token = auth_res.json()["token"]
-    headers = {"Authorization": f"Bearer {token}"}
-
-    # 3. Insert an audit owned by usr-admin-01
+    # 2. Insert an audit record
     sample_analysis = {
         "analysisId": "audit-user-hist",
         "contractName": "HistoryContract.sol",
@@ -223,10 +216,10 @@ def test_list_analyses_history():
         "complianceMatrix": [],
         "summary": "History test contract"
     }
-    db.insert_analysis(sample_analysis, user_id="usr-admin-01")
+    db.insert_analysis(sample_analysis)
 
-    # 4. Authenticated request retrieves owned analyses
-    response = client.get("/api/v1/analyses?risk_level=All", headers=headers)
+    # 3. Retrieve analyses without authentication
+    response = client.get("/api/v1/analyses?risk_level=All")
     assert response.status_code == 200
     data = response.json()
     assert "total" in data
@@ -262,7 +255,7 @@ def test_export_docx_report():
 
 
 def test_auth_login_and_profile():
-    """Verify user login and profile retrieval."""
+    """Verify local user profile and auth compatibility."""
     login_payload = {
         "email": "admin@legal-ai.io",
         "password": "AdminPass2026!"
@@ -271,7 +264,7 @@ def test_auth_login_and_profile():
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "success"
-    assert data["user"]["email"] == "admin@legal-ai.io"
+    assert "user" in data
 
     profile_res = client.get("/api/v1/auth/me")
     assert profile_res.status_code == 200
@@ -427,28 +420,30 @@ def test_cors_headers():
     assert response.headers.get("access-control-allow-origin") == "http://localhost:5173"
 
 
-def test_unauthenticated_analysis_submissions_rejected():
-    """Verify POST /api/v1/analyze, /upload, and /jobs return 401 when unauthenticated."""
+def test_no_login_local_analysis_submission_and_workflow():
+    """Verify POST /api/v1/analyze, /upload, and /jobs succeed without login in local edition."""
     anon_client = TestClient(app)
-    # 1. Direct Analysis
-    r1 = anon_client.post("/api/v1/analyze", json={"sourceCode": SAMPLE_VALID_CONTRACT})
-    assert r1.status_code == 401
-    assert r1.json()["detail"]["code"] == "AUTHENTICATION_REQUIRED"
+    # 1. Direct Analysis without login
+    r1 = anon_client.post("/api/v1/analyze", json={"sourceCode": SAMPLE_VALID_CONTRACT, "contractName": "NoLoginTest.sol"})
+    assert r1.status_code == 200
+    assert "analysisId" in r1.json()
 
-    # 2. File Upload
-    r2 = anon_client.post("/api/v1/analyze/upload", files={"file": ("Contract.sol", b"contract C {}", "text/plain")})
-    assert r2.status_code == 401
-    assert r2.json()["detail"]["code"] == "AUTHENTICATION_REQUIRED"
+    # 2. File Upload without login
+    sol_file = ("NoLogin.sol", SAMPLE_VALID_CONTRACT.encode("utf-8"), "application/octet-stream")
+    r2 = anon_client.post("/api/v1/analyze/upload", files={"file": sol_file})
+    assert r2.status_code == 200
+    assert "analysisId" in r2.json()
 
-    # 3. Async Job Creation
-    r3 = anon_client.post("/api/v1/analyze/jobs", json={"sourceCode": SAMPLE_VALID_CONTRACT})
-    assert r3.status_code == 401
-    assert r3.json()["detail"]["code"] == "AUTHENTICATION_REQUIRED"
+    # 3. Async Job Creation without login
+    r3 = anon_client.post("/api/v1/analyze/jobs", json={"sourceCode": SAMPLE_VALID_CONTRACT, "contractName": "NoLoginJob.sol"})
+    assert r3.status_code == 202
+    job_id = r3.json()["jobId"]
+    assert job_id.startswith("job-")
 
-    # 4. Job Status Retrieval
-    r4 = anon_client.get("/api/v1/jobs/job-fake123")
-    assert r4.status_code == 401
-    assert r4.json()["detail"]["code"] == "AUTHENTICATION_REQUIRED"
+    # 4. Job Status Retrieval without login
+    r4 = anon_client.get(f"/api/v1/jobs/{job_id}")
+    assert r4.status_code == 200
+
 
 
 

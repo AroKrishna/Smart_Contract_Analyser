@@ -135,11 +135,12 @@ class LocalStorageBackend(StorageBackend):
 
         os.makedirs(self.base_dir, exist_ok=True)
 
-    def _resolve_user_dir(self, user_id: str) -> str:
+    def _resolve_user_dir(self, user_id: Optional[str] = None) -> str:
         """Resolves and validates the user-scoped directory."""
-        clean_user = re.sub(r"[^a-zA-Z0-9_\-]", "_", user_id.strip())
+        effective_user = (user_id or "local_user").strip()
+        clean_user = re.sub(r"[^a-zA-Z0-9_\-]", "_", effective_user)
         if not clean_user:
-            raise ValueError("Invalid user identifier.")
+            clean_user = "local_user"
 
         user_dir = os.path.abspath(os.path.join(self.base_dir, clean_user))
         # Directory traversal verification
@@ -149,10 +150,13 @@ class LocalStorageBackend(StorageBackend):
         os.makedirs(user_dir, exist_ok=True)
         return user_dir
 
-    def _resolve_safe_file_path(self, storage_path: str, user_id: str) -> str:
+    def _resolve_safe_file_path(self, storage_path: str, user_id: Optional[str] = None) -> str:
         """Resolves target file path and strictly enforces that it resides within the user directory."""
-        clean_user = re.sub(r"[^a-zA-Z0-9_\-]", "_", user_id.strip())
-        user_dir = self._resolve_user_dir(user_id)
+        effective_user = (user_id or "local_user").strip()
+        clean_user = re.sub(r"[^a-zA-Z0-9_\-]", "_", effective_user)
+        if not clean_user:
+            clean_user = "local_user"
+        user_dir = self._resolve_user_dir(clean_user)
 
         # Check for directory traversal sequences
         norm_path = storage_path.replace("\\", "/").strip("/")
@@ -161,7 +165,7 @@ class LocalStorageBackend(StorageBackend):
             raise PermissionError("Path traversal violation: illegal path components.")
 
         if len(parts) > 1 and parts[0] != clean_user:
-            raise PermissionError(f"Access violation: storage path '{storage_path}' does not belong to user '{user_id}'.")
+            raise PermissionError(f"Access violation: storage path '{storage_path}' does not belong to user '{clean_user}'.")
 
         filename = parts[-1]
         target_path = os.path.abspath(os.path.join(user_dir, filename))

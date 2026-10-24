@@ -26,19 +26,8 @@ const Sidebar = ({ isOpen, onClose }) => {
   ];
 
   const secondaryNavigation = [
-    { name: 'Profile', to: '/profile', icon: User },
-    { name: 'Settings', to: '/settings', icon: Settings },
-    ...(user?.role === 'admin' ? [{ name: 'Admin Panel', to: '/admin', icon: ShieldCheck }] : []),
+    { name: 'Workspace Settings', to: '/settings', icon: Settings },
   ];
-
-  const handleSignOut = async () => {
-    try {
-      await logout();
-    } finally {
-      if (onClose) onClose();
-      navigate('/login');
-    }
-  };
 
   const navLinkClass = ({ isActive }) =>
     `flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
@@ -146,51 +135,21 @@ const Sidebar = ({ isOpen, onClose }) => {
           </div>
         </div>
 
-        {/* Bottom User Profile Section */}
+        {/* Bottom Local Session Indicator */}
         <div className="p-3 border-t border-slate-800/80 bg-slate-950">
-          {isAuthenticated && user ? (
-            <div className="flex items-center justify-between p-2 rounded-lg bg-slate-900/40 border border-slate-800/60">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-full bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-xs font-semibold text-blue-300 shrink-0 uppercase">
-                  {user.name ? user.name.slice(0, 2) : user.email.slice(0, 2)}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-xs font-medium text-slate-200 truncate">
-                    {user.name || user.email}
-                  </div>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className="text-[10px] text-slate-400 truncate max-w-[90px]">{user.email}</span>
-                    <span className={`text-[9px] px-1 py-0.2 rounded font-mono uppercase ${user.role === 'admin' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'}`}>
-                      {user.role}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={handleSignOut}
-                className="p-1.5 rounded-md text-slate-400 hover:text-red-400 hover:bg-slate-800 transition-colors ml-1 shrink-0"
-                title="Sign out"
-                aria-label="Sign out"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
+          <div className="flex items-center gap-2.5 p-2 rounded-lg bg-slate-900/40 border border-slate-800/60">
+            <div className="w-7 h-7 rounded-full bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-[10px] font-bold text-blue-300 shrink-0">
+              LOC
             </div>
-          ) : (
-            <div className="flex items-center justify-between p-2 rounded-lg bg-slate-900/40 border border-slate-800/60">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-7 h-7 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-semibold text-slate-400 shrink-0">
-                  GA
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-xs font-medium text-slate-300 truncate">Guest Session</div>
-                  <Link to="/login" className="text-[10px] text-blue-400 hover:text-blue-300 font-medium">
-                    Sign in to account
-                  </Link>
-                </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-xs font-medium text-slate-200 truncate">
+                Local Edition
+              </div>
+              <div className="text-[10px] text-emerald-400 font-mono">
+                100% Offline &amp; Private
               </div>
             </div>
-          )}
+          </div>
         </div>
       </aside>
     </>

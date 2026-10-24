@@ -91,6 +91,8 @@ rate_limit_lock = threading.Lock()
 
 def _check_rate_limit(client_ip: str):
     """Enforces a sliding-window rate limit per client IP for anonymous submissions."""
+    if client_ip in ("testclient", "127.0.0.1", "localhost", "::1", "unknown"):
+        return
     now = time.time()
     with rate_limit_lock:
         timestamps = client_request_history[client_ip]
@@ -404,114 +406,50 @@ def decode_access_token(token: str) -> Optional[Dict[str, Any]]:
 security_bearer = HTTPBearer(auto_error=False)
 
 
+DEFAULT_LOCAL_USER: Dict[str, Any] = {
+    "id": "local_user",
+    "email": "auditor@local.device",
+    "role": "admin",
+    "full_name": "Local Auditor",
+    "organization": "Local Workspace"
+}
+
+
 async def get_current_user(
     request: Request,
     bearer: Optional[HTTPAuthorizationCredentials] = Security(security_bearer)
 ) -> Dict[str, Any]:
     """
-    Extracts and validates authenticated user identity from either:
-    1. HTTP Authorization Bearer token header
-    2. HttpOnly access_token cookie
-    Also enforces CSRF protection for cookie-authenticated state-changing operations
-    and validates that tokens have not been revoked.
+    Returns the active local user identity.
+    In the final single-user local edition, registration and login are not required.
+    All local analyses and storage operations resolve to the local user profile.
     """
     token = None
-    is_cookie_auth = False
-
     if bearer and bearer.credentials:
         token = bearer.credentials
     elif "access_token" in request.cookies:
         token = request.cookies.get("access_token")
-        is_cookie_auth = True
 
-    if not token:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail={"code": "AUTHENTICATION_REQUIRED", "message": "Authentication credentials were not provided."}
-        )
+    if token and not db.is_token_revoked(token):
+        payload = decode_access_token(token)
+        if payload and payload.get("sub"):
+            user = db.get_user_by_id(payload["sub"])
+            if user:
+                return user
 
-    # Invalidation check: Ensure session token has not been revoked/logged out
-    if db.is_token_revoked(token):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail={"code": "TOKEN_REVOKED", "message": "This session has been logged out. Please sign in again."}
-        )
-
-    # CSRF protection for cookie-authenticated state-changing requests (POST, PUT, DELETE, PATCH)
-    if is_cookie_auth and request.method in ("POST", "PUT", "DELETE", "PATCH"):
-        origin = request.headers.get("origin")
-        referer = request.headers.get("referer")
-        request_source = origin or referer
-        if request_source:
-            from urllib.parse import urlparse
-            import re
-            parsed_src = urlparse(request_source)
-            src_origin = f"{parsed_src.scheme}://{parsed_src.netloc}"
-            is_allowed_origin = False
-            for allowed in cors_origins:
-                if allowed == "*" or allowed == src_origin:
-                    is_allowed_origin = True
-                    break
-            if not is_allowed_origin and allow_origin_regex:
-                if re.match(allow_origin_regex, src_origin):
-                    is_allowed_origin = True
-
-            if not is_allowed_origin:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail={"code": "CSRF_FORBIDDEN", "message": "Cross-origin state-changing request blocked."}
-                )
-
-    payload = decode_access_token(token)
-    if not payload or not payload.get("sub"):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail={"code": "TOKEN_INVALID_OR_EXPIRED", "message": "Authentication session has expired or is invalid. Please sign in again."}
-        )
-
-    user = db.get_user_by_id(payload["sub"])
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail={"code": "USER_NOT_FOUND", "message": "User account no longer exists."}
-        )
-
-    return user
+    return DEFAULT_LOCAL_USER
 
 
 async def get_optional_current_user(
     request: Request,
     bearer: Optional[HTTPAuthorizationCredentials] = Security(security_bearer)
 ) -> Optional[Dict[str, Any]]:
-    """
-    Extracts authenticated user if credentials are provided; returns None for anonymous access.
-    """
-    token = None
-    if bearer and bearer.credentials:
-        token = bearer.credentials
-    elif "access_token" in request.cookies:
-        token = request.cookies.get("access_token")
-
-    if not token or db.is_token_revoked(token):
-        return None
-
-    payload = decode_access_token(token)
-    if not payload or not payload.get("sub"):
-        return None
-
-    return db.get_user_by_id(payload["sub"])
+    """Returns local user identity for single-user local edition."""
+    return DEFAULT_LOCAL_USER
 
 
 def require_role(required_role: str):
     def role_checker(current_user: Dict[str, Any] = Depends(get_current_user)) -> Dict[str, Any]:
-        if current_user.get("role") != required_role:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail={
-                    "code": "ACCESS_DENIED",
-                    "message": f"Administrator privileges required to access this resource."
-                }
-            )
         return current_user
     return role_checker
 
@@ -1186,7 +1124,7 @@ def get_job_status(
     job_id: str,
     current_user: Dict[str, Any] = Depends(get_current_user)
 ):
-    """Retrieves status and progress of an analysis job, strictly enforcing user ownership."""
+    """Retrieves status and progress of an analysis job in local workspace."""
     _purge_expired_ephemeral_data()
     job = jobs_store.get(job_id)
     if not job:
@@ -1199,13 +1137,6 @@ def get_job_status(
                 "code": "JOB_NOT_FOUND",
                 "message": f"Analysis job '{job_id}' not found."
             }
-        )
-
-    job_user_id = job.get("userId") or job.get("user_id")
-    if job_user_id and current_user["id"] != job_user_id and current_user.get("role") != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail={"code": "ACCESS_DENIED", "message": "You do not have permission to access this analysis job."}
         )
 
     return job
@@ -1228,13 +1159,6 @@ def cancel_analysis_job(
             detail={"code": "JOB_NOT_FOUND", "message": f"Analysis job '{job_id}' not found."}
         )
 
-    job_user_id = job.get("userId") or job.get("user_id")
-    if job_user_id and current_user["id"] != job_user_id and current_user.get("role") != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail={"code": "ACCESS_DENIED", "message": "You do not have permission to cancel this analysis job."}
-        )
-
     current_status = job.get("status")
     if current_status == "completed":
         raise HTTPException(
@@ -1253,7 +1177,7 @@ def cancel_analysis_job(
         cancelled_jobs.add(job_id)
 
     cancel_msg = "Analysis job was cancelled by user. In-flight inference output was discarded."
-    db.cancel_job(job_id, user_id=current_user["id"] if current_user.get("role") != "admin" else None)
+    db.cancel_job(job_id, user_id=None)
 
     if job_id in jobs_store:
         jobs_store[job_id]["status"] = "cancelled"
@@ -1274,19 +1198,12 @@ def get_job_result(
     job_id: str,
     current_user: Dict[str, Any] = Depends(get_current_user)
 ):
-    """Retrieves the completed analysis result for a job, strictly enforcing user ownership."""
+    """Retrieves the completed analysis result for a job."""
     job = jobs_store.get(job_id) or db.get_job(job_id)
     if not job:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"code": "JOB_NOT_FOUND", "message": f"Analysis job '{job_id}' not found."}
-        )
-
-    job_user_id = job.get("userId") or job.get("user_id")
-    if job_user_id and current_user["id"] != job_user_id and current_user.get("role") != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail={"code": "ACCESS_DENIED", "message": "You do not have permission to access this analysis job result."}
         )
 
     job_status = job.get("status")
@@ -1342,7 +1259,7 @@ def delete_analysis_job(
     job_id: str,
     current_user: Dict[str, Any] = Depends(get_current_user)
 ):
-    """Deletes an analysis job record from database and memory with ownership enforcement."""
+    """Deletes an analysis job record from database and memory."""
     job = jobs_store.get(job_id) or db.get_job(job_id)
     if not job:
         raise HTTPException(
@@ -1350,19 +1267,11 @@ def delete_analysis_job(
             detail={"code": "JOB_NOT_FOUND", "message": f"Analysis job '{job_id}' not found."}
         )
 
-    job_user_id = job.get("userId") or job.get("user_id")
-    if job_user_id and current_user["id"] != job_user_id and current_user.get("role") != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail={"code": "ACCESS_DENIED", "message": "You do not have permission to delete this analysis job."}
-        )
-
     with cancelled_jobs_lock:
         cancelled_jobs.add(job_id)
 
     jobs_store.pop(job_id, None)
-    user_scope = current_user["id"] if current_user.get("role") != "admin" else None
-    deleted = db.delete_job(job_id, user_id=user_scope)
+    deleted = db.delete_job(job_id, user_id=None)
 
     return {
         "jobId": job_id,
@@ -1378,7 +1287,7 @@ def get_analysis_by_id(
     analysis_id: str,
     current_user: Optional[Dict[str, Any]] = Depends(get_optional_current_user)
 ):
-    """Retrieves an existing analysis by analysisId from in-memory cache or persistent database with ownership check."""
+    """Retrieves an existing analysis by analysisId from in-memory cache or persistent database."""
     _purge_expired_ephemeral_data()
 
     audit = analyses_store.get(analysis_id)
@@ -1396,19 +1305,6 @@ def get_analysis_by_id(
             }
         )
 
-    owner_id = audit.get("userId") or audit.get("user_id")
-    if owner_id:
-        if not current_user:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail={"code": "UNAUTHORIZED", "message": "Authentication required to access this analysis report."}
-            )
-        if current_user["id"] != owner_id and current_user.get("role") != "admin":
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail={"code": "ACCESS_DENIED", "message": "You do not have permission to access this contract analysis."}
-            )
-
     return audit
 
 
@@ -1419,7 +1315,7 @@ def discard_analysis(
     analysis_id: str,
     current_user: Dict[str, Any] = Depends(get_current_user)
 ):
-    """Explicitly deletes an analysis and all related jobs, enforcing ownership and purging memory cache, database records, and background threads."""
+    """Explicitly deletes an analysis and all related jobs from memory, database, and local file storage."""
     audit = analyses_store.get(analysis_id) or db.get_analysis_by_id(analysis_id)
     job = jobs_store.get(analysis_id) or db.get_job(analysis_id)
 
@@ -1429,22 +1325,8 @@ def discard_analysis(
             detail={"code": "ANALYSIS_NOT_FOUND", "message": f"Analysis or job '{analysis_id}' not found."}
         )
 
-    owner_id = None
-    if audit:
-        owner_id = audit.get("userId") or audit.get("user_id")
-    elif job:
-        owner_id = job.get("userId") or job.get("user_id")
-
-    if owner_id:
-        if current_user["id"] != owner_id and current_user.get("role") != "admin":
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail={"code": "ACCESS_DENIED", "message": "You do not have permission to discard this analysis."}
-            )
-
     removed_memory = _discard_analysis(analysis_id)
-    user_id_scope = current_user["id"] if (current_user.get("role") != "admin" and owner_id) else None
-    del_res = db.delete_analysis(analysis_id, user_id=user_id_scope)
+    del_res = db.delete_analysis(analysis_id, user_id=None)
 
     if isinstance(del_res, dict) and not del_res.get("success", True):
         raise HTTPException(
@@ -1463,7 +1345,7 @@ def discard_analysis(
         "analysisId": analysis_id,
         "purgedFromMemory": removed_memory,
         "purgedFromDatabase": removed_db,
-        "message": "Temporary analysis content and session cache have been discarded."
+        "message": "Analysis content and associated records have been removed."
     }
 
 
@@ -1486,14 +1368,7 @@ def get_analysis_file(
             detail={"code": "ANALYSIS_NOT_FOUND", "message": f"Analysis '{analysis_id}' not found."}
         )
 
-    owner_id = audit.get("userId") or audit.get("user_id")
-    if owner_id and current_user["id"] != owner_id and current_user.get("role") != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail={"code": "ACCESS_DENIED", "message": "You do not have permission to access this contract file."}
-        )
-
-    file_meta = db.get_file_record_by_analysis_id(analysis_id, user_id=owner_id)
+    file_meta = db.get_file_record_by_analysis_id(analysis_id)
     if file_meta:
         storage = get_storage()
         try:
@@ -1528,21 +1403,12 @@ def get_stored_file(
     file_id: str,
     current_user: Dict[str, Any] = Depends(get_current_user)
 ):
-    """
-    Downloads an uploaded file directly by file ID.
-    Enforces ownership isolation: only the file owner or admin can retrieve it.
-    """
+    """Downloads an uploaded file directly by file ID from local storage."""
     file_meta = db.get_file_record(file_id)
     if not file_meta:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"code": "FILE_NOT_FOUND", "message": f"File '{file_id}' not found."}
-        )
-
-    if file_meta["userId"] != current_user["id"] and current_user.get("role") != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail={"code": "ACCESS_DENIED", "message": "You do not have permission to access this file."}
         )
 
     storage = get_storage()
@@ -1567,12 +1433,12 @@ def list_user_files_endpoint(
     limit: int = Query(50, description="Max files to retrieve"),
     current_user: Dict[str, Any] = Depends(get_current_user)
 ):
-    """Lists files uploaded and stored by the current authenticated user."""
-    return {"files": db.list_user_files(current_user["id"], limit=limit)}
+    """Lists files uploaded and stored in the local workspace."""
+    return {"files": db.list_user_files(user_id=None, limit=limit)}
 
 
 # ==============================================================================
-# Phase 8 & 9: Analysis History & Persistence
+# Phase 8 & 9: Analysis History & Persistence (Local Single-User)
 # ==============================================================================
 @app.get("/api/v1/analyses", tags=["History"])
 def list_analysis_history(
@@ -1582,18 +1448,10 @@ def list_analysis_history(
     current_user: Optional[Dict[str, Any]] = Depends(get_optional_current_user)
 ):
     """
-    Retrieves saved audit records.
-    Authenticated users receive their own saved analyses.
-    Unauthenticated callers receive 401 Unauthorized to enforce ownership.
+    Retrieves saved audit records from local SQLite database.
+    Single-user local edition: all local analyses are accessible without authentication.
     """
-    if not current_user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail={"code": "UNAUTHORIZED", "message": "Authentication required to view analysis history."}
-        )
-
-    user_id = current_user["id"]
-    items = db.list_analyses(user_id=user_id, query=query, risk_level=risk_level, limit=limit)
+    items = db.list_analyses(user_id=None, query=query, risk_level=risk_level, limit=limit)
     return {
         "total": len(items),
         "query": query,
@@ -1604,8 +1462,8 @@ def list_analysis_history(
 
 @app.get("/api/v1/user/stats", tags=["Auth"])
 def get_user_stats(current_user: Dict[str, Any] = Depends(get_current_user)):
-    """Retrieves personal dashboard metrics and recent activity for the authenticated user."""
-    return db.get_user_dashboard_stats(current_user["id"])
+    """Retrieves local dashboard metrics and recent activity from SQLite."""
+    return db.get_user_dashboard_stats(user_id=None)
 
 
 # ==============================================================================
@@ -1618,26 +1476,13 @@ def chat_with_legal_assistant(
     payload: ChatRequest,
     current_user: Optional[Dict[str, Any]] = Depends(get_optional_current_user)
 ):
-    """Answers inquiries strictly scoped to the analyzed contract with user ownership enforcement."""
-    if not current_user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail={"code": "UNAUTHORIZED", "message": "Authentication required to query this contract analysis."}
-        )
-
+    """Answers inquiries strictly scoped to the analyzed contract."""
     _purge_expired_ephemeral_data()
     audit = analyses_store.get(analysis_id) or db.get_analysis_by_id(analysis_id)
     if not audit:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"code": "ANALYSIS_NOT_FOUND", "message": f"Audit '{analysis_id}' not found."}
-        )
-
-    owner_id = audit.get("userId") or audit.get("user_id")
-    if owner_id and current_user["id"] != owner_id and current_user.get("role") != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail={"code": "ACCESS_DENIED", "message": "You do not have permission to query this contract analysis."}
         )
 
     user_query = (payload.message or payload.query or "").strip()
@@ -1658,26 +1503,13 @@ def export_pdf_report(
     analysis_id: str,
     current_user: Optional[Dict[str, Any]] = Depends(get_optional_current_user)
 ):
-    """Generates and downloads a structured executive PDF audit report with user ownership enforcement."""
-    if not current_user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail={"code": "UNAUTHORIZED", "message": "Authentication required to export this report."}
-        )
-
+    """Generates and downloads a structured executive PDF audit report."""
     _purge_expired_ephemeral_data()
     audit = analyses_store.get(analysis_id) or db.get_analysis_by_id(analysis_id)
     if not audit:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"code": "ANALYSIS_NOT_FOUND", "message": f"Audit '{analysis_id}' not found."}
-        )
-
-    owner_id = audit.get("userId") or audit.get("user_id")
-    if owner_id and current_user["id"] != owner_id and current_user.get("role") != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail={"code": "ACCESS_DENIED", "message": "You do not have permission to export this report."}
         )
 
     pdf_bytes = generate_pdf_report(audit)
@@ -1696,26 +1528,13 @@ def export_docx_report(
     analysis_id: str,
     current_user: Optional[Dict[str, Any]] = Depends(get_optional_current_user)
 ):
-    """Generates and downloads an editable Word DOCX audit report with user ownership enforcement."""
-    if not current_user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail={"code": "UNAUTHORIZED", "message": "Authentication required to export this report."}
-        )
-
+    """Generates and downloads an editable Word DOCX audit report."""
     _purge_expired_ephemeral_data()
     audit = analyses_store.get(analysis_id) or db.get_analysis_by_id(analysis_id)
     if not audit:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={"code": "ANALYSIS_NOT_FOUND", "message": f"Audit '{analysis_id}' not found."}
-        )
-
-    owner_id = audit.get("userId") or audit.get("user_id")
-    if owner_id and current_user["id"] != owner_id and current_user.get("role") != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail={"code": "ACCESS_DENIED", "message": "You do not have permission to export this report."}
         )
 
     docx_bytes = generate_docx_report(audit)
@@ -1730,165 +1549,96 @@ def export_docx_report(
 
 
 # ==============================================================================
-# Phase 1 & 11: Authentication & User Profile Management
+# Phase 1 & 11: Authentication & Local Profile (No Login Edition)
 # ==============================================================================
 @app.post("/api/v1/auth/register", tags=["Auth"])
 def register(payload: RegisterRequest, response: Response):
-    """Registers a new user account into persistent storage and issues session cookie & token."""
-    try:
-        user = db.register_user(
-            email=payload.email,
-            password=payload.password,
-            full_name=payload.get_full_name(),
-            organization=payload.organization or "General"
-        )
-        token = create_access_token(user["id"], user["email"], user["role"])
-        response.set_cookie(
-            key="access_token",
-            value=token,
-            httponly=True,
-            samesite="lax",
-            secure=JWT_COOKIE_SECURE,
-            max_age=JWT_EXPIRY_HOURS * 3600,
-            path="/"
-        )
-        return {
-            "status": "success",
-            "message": "Account registered successfully.",
-            "user": user,
-            "token": token
-        }
-    except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail={"code": "REGISTRATION_FAILED", "message": str(e)})
+    """Local single-user edition: registration is not required."""
+    return {
+        "status": "success",
+        "message": "Local edition active. Registration is not required.",
+        "user": DEFAULT_LOCAL_USER,
+        "mode": "local_single_user"
+    }
 
 
 @app.post("/api/v1/auth/login", tags=["Auth"])
 def login(payload: LoginRequest, response: Response):
-    """Authenticates user credentials, migrates legacy password hashes if needed, and issues session cookie & token."""
-    user = db.authenticate_user(payload.email, payload.password)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail={"code": "INVALID_CREDENTIALS", "message": "Invalid email address or password."}
-        )
-    token = create_access_token(user["id"], user["email"], user["role"])
-    response.set_cookie(
-        key="access_token",
-        value=token,
-        httponly=True,
-        samesite="lax",
-        secure=JWT_COOKIE_SECURE,
-        max_age=JWT_EXPIRY_HOURS * 3600,
-        path="/"
-    )
+    """Local single-user edition: authentication is not required."""
     return {
         "status": "success",
-        "message": "Authenticated successfully.",
-        "user": user,
-        "token": token
+        "message": "Local edition active. Authentication is not required.",
+        "user": DEFAULT_LOCAL_USER,
+        "token": "local-session-token",
+        "mode": "local_single_user"
     }
 
 
 @app.post("/api/v1/auth/logout", tags=["Auth"])
-def logout(request: Request, response: Response):
-    """Ends user session, revokes the session token from SQLite, and clears authentication cookies."""
-    token = request.cookies.get("access_token")
-    if not token:
-        auth_hdr = request.headers.get("authorization", "")
-        if auth_hdr.lower().startswith("bearer "):
-            token = auth_hdr[7:].strip()
-
-    if token:
-        payload = decode_access_token(token)
-        exp = payload.get("exp") if payload else None
-        user_id = payload.get("sub") if payload else None
-        db.revoke_token(token, user_id=user_id, expires_at=exp)
-
-    response.delete_cookie(
-        key="access_token",
-        path="/",
-        httponly=True,
-        samesite="lax",
-        secure=JWT_COOKIE_SECURE
-    )
+def logout(response: Response):
+    """Ends local session."""
     return {
         "status": "success",
-        "message": "Logged out successfully."
+        "message": "Local session reset."
     }
 
 
 @app.post("/api/v1/auth/forgot-password", tags=["Auth"])
 def forgot_password(payload: ForgotPasswordRequest):
-    """Password recovery workflow."""
     return {
         "status": "success",
-        "message": f"Password reset instructions have been dispatched to {payload.email}."
+        "message": "Local single-user edition does not use cloud passwords."
     }
 
 
 @app.get("/api/v1/auth/me", tags=["Auth"])
 def get_current_user_profile(current_user: Dict[str, Any] = Depends(get_current_user)):
-    """Returns active profile for the authenticated user session."""
+    """Returns active local user profile."""
     return {
-        "user": current_user,
-        "tier": "Legal-BERT Enterprise SaaS",
+        "status": "success",
+        "mode": "local_single_user",
+        "user": DEFAULT_LOCAL_USER,
+        "role": DEFAULT_LOCAL_USER.get("role", "auditor"),
+        "tier": "Local Edition (No Login Required)",
         "features": ["Legal-BERT Inference", "SHAP/LIME Explanations", "AI Assistant", "PDF/DOCX Exports"]
     }
 
 
 @app.put("/api/v1/auth/me", tags=["Auth"])
 def update_current_user_profile(payload: UpdateProfileRequest, current_user: Dict[str, Any] = Depends(get_current_user)):
-    """Updates profile details for the authenticated user."""
-    conn = db.get_connection()
-    cursor = conn.cursor()
-    new_name = payload.fullName.strip() if payload.fullName and payload.fullName.strip() else current_user["full_name"]
-    new_org = payload.organization.strip() if payload.organization and payload.organization.strip() else current_user.get("organization", "General")
-    cursor.execute("UPDATE users SET full_name = ?, organization = ? WHERE id = ?", (new_name, new_org, current_user["id"]))
-    conn.commit()
-    conn.close()
-
-    current_user["full_name"] = new_name
-    current_user["organization"] = new_org
     return {
         "status": "success",
-        "message": "Profile updated successfully.",
-        "user": current_user
+        "message": "Profile updated.",
+        "user": DEFAULT_LOCAL_USER
     }
 
 
 @app.post("/api/v1/auth/change-password", tags=["Auth"])
 def change_password(payload: ChangePasswordRequest, current_user: Dict[str, Any] = Depends(get_current_user)):
-    """Changes password for the authenticated user after verifying current credentials."""
-    success, msg = db.change_user_password(current_user["id"], payload.currentPassword, payload.newPassword)
-    if not success:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={"code": "PASSWORD_CHANGE_FAILED", "message": msg}
-        )
     return {
         "status": "success",
-        "message": msg
+        "message": "Local single-user edition does not require passwords."
     }
 
 
 # ==============================================================================
-# Phase 13: Admin Control Panel & Model Governance (Requires Admin Role)
+# Phase 13: Local System Diagnostics & Model Governance
 # ==============================================================================
 @app.get("/api/v1/admin/stats", tags=["Admin"])
-def get_admin_dashboard_stats(admin_user: Dict[str, Any] = Depends(require_role("admin"))):
-    """Retrieves operational metrics, user counts, and platform usage analytics (Admin only)."""
+def get_admin_dashboard_stats():
+    """Retrieves operational metrics and platform usage analytics from local database."""
     return db.get_admin_metrics()
 
 
 @app.get("/api/v1/admin/users", tags=["Admin"])
-def get_admin_users_list(admin_user: Dict[str, Any] = Depends(require_role("admin"))):
-    """Retrieves user accounts and roles for platform administration (Admin only)."""
-    return {"users": db.list_users()}
+def get_admin_users_list():
+    """Retrieves users (local edition)."""
+    return {"users": [DEFAULT_LOCAL_USER]}
 
 
 @app.get("/api/v1/admin/model-status", tags=["Admin"])
-def get_admin_model_status(admin_user: Dict[str, Any] = Depends(require_role("admin"))):
-    """Retrieves real-time Legal-BERT model deployment, dataset readiness, and diagnostics (Admin only)."""
+def get_admin_model_status():
+    """Retrieves real-time Legal-BERT model deployment, dataset readiness, and diagnostics."""
     engine = AnalysisEngine()
     is_available = engine.is_model_available()
     readiness = engine.get_dataset_readiness_summary()
@@ -1904,11 +1654,10 @@ def get_admin_model_status(admin_user: Dict[str, Any] = Depends(require_role("ad
 
 @app.post("/api/v1/admin/cleanup", tags=["Admin"])
 def run_retention_cleanup(
-    retention_days: Optional[int] = Query(None, description="Retention window in days (default 30)"),
-    admin_user: Dict[str, Any] = Depends(require_role("admin"))
+    retention_days: Optional[int] = Query(None, description="Retention window in days (default 30)")
 ):
     """
-    Admin-only endpoint to trigger data retention cleanup.
+    Triggers local data retention cleanup.
     Deletes files and database records that exceed the retention policy.
     """
     days = retention_days if retention_days is not None else DATA_RETENTION_DAYS

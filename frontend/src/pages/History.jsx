@@ -33,11 +33,6 @@ const History = () => {
     let isCancelled = false;
 
     async function loadHistory() {
-      if (!isAuthenticated) {
-        setLiveAudits([]);
-        return;
-      }
-
       setLoading(true);
       try {
         const data = await api.listHistory(searchQuery, selectedRiskLevel);
@@ -58,7 +53,7 @@ const History = () => {
     return () => {
       isCancelled = true;
     };
-  }, [searchQuery, selectedRiskLevel, isAuthenticated]);
+  }, [searchQuery, selectedRiskLevel]);
 
   const handleDelete = async (auditId, e) => {
     e.preventDefault();

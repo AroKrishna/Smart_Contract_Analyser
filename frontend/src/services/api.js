@@ -4,21 +4,17 @@
  * Supports configurable VITE_API_BASE_URL, unified request dispatching, and safe diagnostic error handling.
  */
 
-const isDev = Boolean(import.meta.env.DEV);
-
 /**
  * Resolves the active backend API base URL:
  * 1. Explicit VITE_API_BASE_URL environment variable if configured.
- * 2. In local development (npm run dev), defaults to http://127.0.0.1:8000.
- * 3. In production without VITE_API_BASE_URL, returns empty string (relative requests).
+ * 2. Defaults to empty string so all requests use relative paths ('/api/...', '/ready', etc.).
+ *    In local development, the Vite dev server proxy forwards these to http://127.0.0.1:8000,
+ *    guaranteeing that login, session cookies, and analysis submissions share the exact same local origin.
  */
 export function getApiBaseUrl() {
   const envUrl = (import.meta.env.VITE_API_BASE_URL || '').trim().replace(/\/+$/, '');
   if (envUrl) {
     return envUrl;
-  }
-  if (isDev || (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))) {
-    return 'http://127.0.0.1:8000';
   }
   return '';
 }
@@ -44,7 +40,6 @@ async function request(endpoint, options = {}) {
   let response;
   try {
     response = await fetch(url, {
-      credentials: 'include',
       ...options,
       headers,
     });
@@ -365,7 +360,7 @@ export const api = {
 
     let response;
     try {
-      response = await fetch(url, { credentials: 'include' });
+      response = await fetch(url);
     } catch (err) {
       throw new Error(`Unable to reach the report download service. Please verify backend connectivity.`);
     }
@@ -411,7 +406,6 @@ export const api = {
     const url = baseUrl ? `${baseUrl}${endpoint}` : endpoint;
 
     const response = await fetch(url, {
-      credentials: 'include',
       headers: {
         'X-Requested-With': 'XMLHttpRequest',
       },
@@ -462,46 +456,36 @@ export const api = {
   },
 
   /**
-   * Phase 1 & 11: Auth methods
+   * Local edition helper methods (single-user, no registration/session required)
    */
-  async login(email, password) {
-    return await request('/api/v1/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ email, password }),
-    });
+  async login() {
+    return { status: 'success', user: { id: 'local_user', name: 'Local Auditor', role: 'auditor' } };
   },
 
-  async register(email, password, fullName, organization) {
-    return await request('/api/v1/auth/register', {
-      method: 'POST',
-      body: JSON.stringify({ email, password, fullName, organization }),
-    });
+  async register() {
+    return { status: 'success', user: { id: 'local_user', name: 'Local Auditor', role: 'auditor' } };
   },
 
   async logout() {
-    return await request('/api/v1/auth/logout', { method: 'POST' });
+    return { status: 'success', message: 'Local session active' };
   },
 
   async getCurrentUser() {
-    try {
-      return await request('/api/v1/auth/me');
-    } catch {
-      return null;
-    }
+    return {
+      status: 'success',
+      user: { id: 'local_user', name: 'Local Auditor', email: 'auditor@local.device', role: 'auditor' },
+    };
   },
 
-  async changePassword(currentPassword, newPassword) {
-    return await request('/api/v1/auth/change-password', {
-      method: 'POST',
-      body: JSON.stringify({ currentPassword, newPassword }),
-    });
+  async changePassword() {
+    return { status: 'success', message: 'Local edition does not use passwords.' };
   },
 
   async updateProfile(fullName, organization) {
-    return await request('/api/v1/auth/me', {
-      method: 'PUT',
-      body: JSON.stringify({ fullName, organization }),
-    });
+    return {
+      status: 'success',
+      user: { id: 'local_user', name: fullName || 'Local Auditor', organization: organization || 'Local Workspace', role: 'auditor' },
+    };
   },
 
   /**

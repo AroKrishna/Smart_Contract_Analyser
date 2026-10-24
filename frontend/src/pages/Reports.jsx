@@ -27,10 +27,6 @@ const Reports = () => {
   useEffect(() => {
     let isCancelled = false;
     async function loadReports() {
-      if (!isAuthenticated) {
-        setLiveReports([]);
-        return;
-      }
       setLoading(true);
       try {
         const data = await api.listHistory();
@@ -47,7 +43,7 @@ const Reports = () => {
           setLiveReports(mapped);
         }
       } catch (err) {
-        console.warn('Failed to load user reports:', err);
+        console.warn('Failed to load local reports:', err);
       } finally {
         if (!isCancelled) setLoading(false);
       }
@@ -57,9 +53,9 @@ const Reports = () => {
     return () => {
       isCancelled = true;
     };
-  }, [isAuthenticated]);
+  }, []);
 
-  const sourceReports = isAuthenticated ? liveReports : mockReports;
+  const sourceReports = liveReports;
   const filteredReports = sourceReports.filter((rep) =>
     rep.contractName.toLowerCase().includes(searchQuery.toLowerCase()) ||
     rep.contractType.toLowerCase().includes(searchQuery.toLowerCase())

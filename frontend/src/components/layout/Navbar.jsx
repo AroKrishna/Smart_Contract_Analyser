@@ -45,17 +45,11 @@ const Navbar = () => {
 
           {/* Right Action Buttons */}
           <div className="hidden sm:flex items-center gap-3">
-            {isAuthenticated ? (
-              <Link to="/dashboard">
-                <Button variant="secondary" size="sm">
-                  Dashboard
-                </Button>
-              </Link>
-            ) : (
-              <Link to="/login" className="text-sm font-medium text-slate-300 hover:text-white px-3 py-1.5 transition-colors">
-                Sign In
-              </Link>
-            )}
+            <Link to="/dashboard">
+              <Button variant="secondary" size="sm">
+                Dashboard
+              </Button>
+            </Link>
             <Link to="/analysis/new">
               <Button variant="primary" size="sm" icon={ArrowRight} iconPosition="right">
                 Audit Contract

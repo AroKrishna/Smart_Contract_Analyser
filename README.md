@@ -1,362 +1,271 @@
-# Smart Contract Analyser
+# Smart Contract Analyser — Final Local Edition
 
-> **Explainable AI (XAI) Framework for Automated Legal-Risk Assessment in Solidity Smart Contracts**
+> **Explainable AI (XAI) Framework for Automated Legal-Risk Assessment in Solidity Smart Contracts**  
+> *Downloadable, fully offline & private single-user college application. No registration, no login, and no cloud accounts required.*
 
 [![React](https://img.shields.io/badge/React-19-blue.svg)](https://react.dev/)
 [![Vite](https://img.shields.io/badge/Vite-8-purple.svg)](https://vite.dev/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4-38bdf8.svg)](https://tailwindcss.com/)
-[![License](https://img.shields.io/badge/License-MIT-emerald.svg)](LICENSE)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-emerald.svg)](https://fastapi.tiangolo.com/)
+[![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-red.svg)](https://pytorch.org/)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 ---
 
 ## 📌 Project Overview
 
-**Smart Contract Analyser** is a web-based Explainable AI SaaS platform designed to analyze Solidity smart contracts for potential pre-deployment legal and compliance risks.
+**Smart Contract Analyser** is a downloadable, locally run college research application designed to evaluate Solidity smart contracts for potential operational and legal risks prior to deployment.
 
-While traditional smart contract auditing predominantly focuses on execution-level security (reentrancy, integer overflows, access control), a smart contract can execute without technical runtime errors while still containing terms that impose illegal penalties, violate consumer protection guidelines, or create severe legal liability.
+While standard security audit tools focus on technical execution vulnerabilities (reentrancy, integer overflows, access control), a smart contract can execute without technical runtime errors while still containing clauses that violate legal standards, enforce punitive unilateral forfeitures, or impose unconstrained liabilities.
 
-This system provides automated pre-deployment decision support, pairing **Legal-BERT-based semantic classification** with **SHAP and LIME interpretability** to highlight risky clauses, explain model verdicts, and suggest safer contractual alternatives.
+This application runs **entirely on your own computer**:
+- The **FastAPI backend** runs on local loopback (`127.0.0.1:8000`).
+- The **React frontend** runs locally via Vite (`http://127.0.0.1:5173`).
+- **Legal-BERT neural inference** runs locally on your CPU/GPU.
+- All uploaded `.sol` files, analysis history, SQLite database records, and generated PDF/DOCX reports remain strictly on your local disk.
+- **Zero login requirement**: No registration, no passwords, no session cookies, and no cloud accounts or external database connections.
+
+> [!IMPORTANT]
+> **Repository Access Note:** This GitHub repository (`https://github.com/AroKrishna/Smart_Contract_Analyser_Private`) is **private**. To allow a friend or collaborator to clone this project on their laptop, they must first be added as a collaborator under your GitHub repository settings (**Settings ➔ Collaborators ➔ Add people**).
 
 ---
 
-## 🔬 Core AI & Research Pipeline
+## 🔬 Core Analysis Pipeline
 
 ```text
-Solidity Smart Contract
+Uploaded Solidity Contract (.sol)
         ↓
-Preprocessing & Normalization
+AST Tokenization & Clause Parsing
         ↓
-AST Tokenization
+Local Legal-BERT Multi-Category Classification
         ↓
-Legal-BERT-based Analysis
+SHAP + LIME Token-Level Interpretability
         ↓
-Legal Risk Classification
+Risk Breakdown Across 5 Operational Categories
         ↓
-SHAP + LIME Interpretability Engine
+Context-Grounded AI Legal Assistant & Statutory Recommendations
         ↓
-Risk Score & 5 Risk Categories
-        ↓
-Remediation Recommendations
-        ↓
-Structured Decision-Support Audit Report
+Local SQLite Persistence & PDF / DOCX Report Exports
 ```
 
-### The 5 Primary Legal Risk Categories:
-1. **Privacy**: Unintended exposure of personal data, storage of identifiable records on public ledger states, and GDPR/CCPA friction.
-2. **Termination**: Unilateral emergency self-destruction (`selfdestruct`), indefinite freeze mechanisms, and cancellation without participant recourse.
-3. **Legal Compliance**: Non-compliance with consumer protection regulations, fee disclosure mandates, and statutory standards.
-4. **Liability**: Punitive indemnity clauses, complete exclusion of liability for intentional misconduct, and unbalanced risk allocation.
-5. **Payment / Financial**: Locked withdrawals, arbitrary fee alterations, and unilateral fund confiscation clauses.
-
-### Explainable AI (XAI) Layer:
-* **SHAP (Shapley Additive Explanations)**: Measures the game-theoretic marginal contribution of each code token to demonstrate which constructs pushed the contract into a higher or lower risk category.
-* **LIME (Local Interpretable Model-agnostic Explanations)**: Constructs local surrogate models around individual clause boundaries to provide human-interpretable explanations.
+### The 5 Operational Risk Categories:
+1. **Privacy**: State-level exposure of personally identifiable information, non-compliance with data deletion mandates, public ledger confidentiality friction.
+2. **Termination**: Unilateral emergency destruction (`selfdestruct`), unconstrained pause mechanisms without recourse, arbitrary contract kill-switches.
+3. **Legal Compliance**: Unfair standard terms, consumer protection friction, regulatory disclosure non-compliance.
+4. **Liability**: Unbalanced indemnity clauses, complete disclaimers for intentional misconduct, asymmetric risk allocation.
+5. **Payment / Financial**: Unilateral fee modifications, locked balances, arbitrary confiscation routines.
 
 ---
 
-## ⚖️ Responsible Auditing Disclaimer
+## ⚖️ Non-Legal-Advice Disclaimer
 
-**Smart Contract Analyser is an automated, pre-deployment decision-support auditing tool.** 
-* It is **not** intended to replace qualified legal counsel.
-* It does **not** guarantee statutory legal compliance across jurisdictions.
-* It does **not** certify that a smart contract is legally binding or valid.
-Developers and organizations must always consult professional legal advisors for official contract validation.
+> [!WARNING]
+> **Academic Decision-Support Tool — Not Legal Advice**  
+> Smart Contract Analyser is an automated, experimental decision-support application built for academic research and operational risk screening. It does **not** provide legal advice, does **not** substitute for qualified legal counsel, and does **not** guarantee statutory validity or compliance across legal jurisdictions. Always consult an attorney for contract reviews.
 
 ---
 
-## 📂 Project Architecture
+## 💻 System Prerequisites
 
-```text
-Smart_Contract_Analyser/
-├── docs/
-│   ├── CURRENT_STATE_AND_GAPS.md   # Verified audit of implementation vs target spec
-│   ├── ANALYSIS_SPECIFICATION.md   # Unified analysis schema & API contract
-│   ├── BASELINE_EXPERIMENT_REPORT.md # Deterministic baseline experiment & dev metrics
-│   ├── BENCHMARK_EXPANSION_PLAN.md # 35-contract benchmark expansion roadmap
-│   ├── ANNOTATION_GUIDE.md         # Labeling standards for operational hazards
-│   ├── PROJECT_CONTEXT.md          # Master context and taxonomy
-│   ├── FRONTEND_ROUTES.md          # 10 application routes mapping
-│   └── reference/                  # Authoritative DOCX platform specification
-│
-├── analysis/
-│   ├── api.py                      # FastAPI REST service & LRU in-memory cache
-│   ├── engine.py                   # Composite risk calculator & finding synthesizer
-│   ├── parser.py                   # Pure Python Solidity regex & NatSpec parser
-│   ├── rules.py                    # 5 deterministic operational pattern rules
-│   ├── evaluate.py                 # Benchmark evaluation & confusion matrix harness
-│   ├── benchmark_schema.py         # Provenance schema & split isolation validator
-│   └── data/                       # Dev contracts (BM001-BM005) & benchmark manifest
-│
-├── tests/
-│   └── test_api.py                 # FastAPI endpoint & payload validation tests
-│
-├── frontend/
-│   ├── public/                     # Static assets & routing rewrites
-│   ├── src/
-│   │   ├── components/             # Reusable UI, layout, dashboard, & analysis components
-│   │   ├── pages/                  # Landing, Login, Register, Dashboard, NewAnalysis, AnalysisResult, History, Reports, Profile, Settings
-│   │   ├── layouts/                # PublicLayout, DashboardLayout
-│   │   ├── data/                   # mockData.js (Fallback demo datasets)
-│   │   ├── services/api.js         # API client with dual-target fallback & session cache
-│   │   ├── utils/constants.js      # Risk categories, levels, and pipeline stages
-│   │   ├── App.jsx                 # React Router v7 configuration
-│   │   └── index.css               # Tailwind CSS v4 styling & Inter font
-│   └── package.json
-│
-├── .gitignore                      # Prevents committing node_modules, cache, and builds
-└── README.md
-```
+Before running the project on your machine:
+
+| Component | Minimum Version | Verified Version | Notes |
+|:---|:---|:---|:---|
+| **Python** | 3.10+ | 3.14.3 / 3.11 | Required for FastAPI backend and PyTorch |
+| **Node.js** | 18.0+ | 20.x / 22.x | Required for React frontend |
+| **npm** | 9.0+ | 10.x+ | Included with Node.js |
+| **Git** | 2.30+ | Latest | Required to clone the repository |
+| **Disk Space** | ~1.5 GB | - | Model weights (~418 MB) + virtual env + node_modules |
 
 ---
 
-## 🚦 Current Release vs. Research Target
+## 🚀 Setup & Installation Guide
 
-- **Current Public Release**:
-  - Open public access without mandatory login.
-  - Interactive Solidity source code upload (.sol) or paste.
-  - Deterministic operational baseline analyzing 5 primary legal-risk categories.
-  - Temporary in-memory LRU cache (100 entries) and browser session caching.
-  - Rule-derived illustrative token attributions populating XAI charts.
-- **Research & Platform Target (In Progress)**:
-  - Deep learning integration with **Legal-BERT** for semantic clause classification.
-  - Genuine game-theoretic **SHAP** and local surrogate **LIME** model interpretability.
-  - Empirical model confidence calibration.
-  - Multi-contract compilation with full AST graphs and proxy resolution.
-  - Persistent database, user accounts, and scoped AI legal assistant.
+Follow these steps in order to install and launch the application on your computer.
 
-See [docs/CURRENT_STATE_AND_GAPS.md](docs/CURRENT_STATE_AND_GAPS.md) for the complete verified gap audit.
+### Step 1: Clone the Private Repository
 
----
-
-## 🚀 Getting Started Locally
-
-### Prerequisites
-* **Python** (v3.10+ recommended, verified on 3.14.3)
-* **Node.js** (v18.0 or newer recommended, verified on v20+)
-* **npm** (v9.0 or newer)
-* **Docker & Docker Compose** (optional, for containerized execution)
-
----
-
-### 1. Clone the repository
 ```bash
 git clone https://github.com/AroKrishna/Smart_Contract_Analyser_Private.git
 cd Smart_Contract_Analyser_Private
 ```
 
+*(Ensure the repository owner has granted your GitHub account access before cloning).*
+
 ---
 
-### 2. Configure Environment Variables
-Copy the template configuration into `.env` in the project root:
+### Step 2: Set Up Python Backend & Dependencies
+
+From the repository root:
 
 **Windows (PowerShell):**
 ```powershell
-Copy-Item .env.example .env
+# 1. Create a Python virtual environment
+python -m venv .venv
+
+# 2. Activate the virtual environment
+.venv\Scripts\Activate.ps1
+
+# 3. Upgrade pip and install backend dependencies
+python -m pip install --upgrade pip
+pip install -r requirements.txt
 ```
 
 **Linux / macOS (Bash):**
 ```bash
-cp .env.example .env
-```
+# 1. Create a Python virtual environment
+python3 -m venv .venv
 
-Key variables configured in `.env` (with safe default placeholders):
-- `ALLOWED_ORIGINS`: Comma-separated CORS origins (defaults to `http://localhost:5173,http://127.0.0.1:5173`).
-- `MAX_CONCURRENT_ANALYSIS_JOBS`: Concurrency throttle for CPU protection (default: `1`).
-- `RATE_LIMIT_PER_MINUTE`: Sliding-window submission limit per client IP (default: `20`).
-- `ANALYSIS_TTL_MINUTES`: In-memory analysis retention TTL in minutes (default: `30`).
-- `MAX_STORED_ANALYSES`: Maximum in-memory FIFO analyses cache (default: `100`).
-- `STORAGE_DIR`: Local filesystem storage directory for uploaded `.sol` files (defaults to `backend/data/storage`).
-- `DATA_RETENTION_DAYS`: Retention lifecycle period for analyses and uploaded contracts (default: `30` days).
-- `JWT_SECRET`: Secret key used for signing session tokens (pre-configured for development; change for production).
-- `SEED_DEV_ACCOUNTS`: Automatically seeds local test accounts when set to `true` (default: `true` in local development).
-- `MODEL_WEIGHTS_URL`: Optional direct HTTPS URL to download weights automatically if absent.
-- `EXPECTED_MODEL_SHA256`: Expected SHA-256 hash for verifying model weights (`4c5d1c1caf6f42e38173d6fc1b69a924cf2ad93e0188e0f5bb057ac0b73d972e`).
+# 2. Activate the virtual environment
+source .venv/bin/activate
+
+# 3. Upgrade pip and install backend dependencies
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
 
 ---
 
-### 3. Legal-BERT Model Checkpoint Setup
-The active analysis engine expects the fine-tuned Legal-BERT checkpoint at:
-`analysis/models/legal_bert_v3.3.0/model.safetensors` (~438 MB).
-*(The backend also automatically recognizes `backend/analysis/models/legal_bert_v3.3.0/model.safetensors`).*
+### Step 3: Download & Verify Legal-BERT Model Weights
 
-> [!NOTE]
-> Because ordinary Git repositories reject files exceeding 100 MiB and Git LFS is omitted to prevent bandwidth quotas, binary model weight files are excluded from Git via `.gitignore`. Model architecture configs (`config.json`), tokenizer definitions, and training metrics are tracked in the repository.
+The neural analysis engine requires the fine-tuned Legal-BERT model weights (`model.safetensors`, ~418 MB). Model binaries are excluded from Git to keep the repository lightweight.
 
-#### Option A: Automated Cross-Platform Setup Script (Recommended)
-Use the included model setup script to download and verify the checksum in one command:
+Run the built-in setup script to automatically download the verified release asset and check its SHA-256 hash:
+
 ```bash
 python scripts/setup_model.py
 ```
-To check an existing local checkpoint without re-downloading:
+
+To verify the local model file at any time without re-downloading:
 ```bash
 python scripts/setup_model.py --check-only
 ```
 
-#### Option B: Manual Download from Official Release Asset
-You can download the verified release asset directly:
+#### Manual Download Alternative:
+If your network restricts automated Python downloads, download the file manually:
+- **Download URL**: `https://github.com/AroKrishna/Smart_Contract_Analyser/releases/download/v3.3.0/model.safetensors`
+- **Destination Path**: `analysis/models/legal_bert_v3.3.0/model.safetensors`
+- **Expected SHA-256**: `4c5d1c1caf6f42e38173d6fc1b69a924cf2ad93e0188e0f5bb057ac0b73d972e`
 
-- **Release Asset URL**:
-  `https://github.com/AroKrishna/Smart_Contract_Analyser/releases/download/v3.3.0/model.safetensors`
-- **Expected SHA-256 Checksum**:
-  `4c5d1c1caf6f42e38173d6fc1b69a924cf2ad93e0188e0f5bb057ac0b73d972e`
-
-**Windows (PowerShell):**
-```powershell
-# Create destination directory if needed
-New-Item -ItemType Directory -Force -Path "analysis\models\legal_bert_v3.3.0"
-
-# Download model checkpoint weights (~438 MB)
-curl.exe -L -o "analysis\models\legal_bert_v3.3.0\model.safetensors" "https://github.com/AroKrishna/Smart_Contract_Analyser/releases/download/v3.3.0/model.safetensors"
-
-# Verify SHA-256 checksum
-(Get-FileHash -Algorithm SHA256 "analysis\models\legal_bert_v3.3.0\model.safetensors").Hash
-# Must output: 4C5D1C1CAF6F42E38173D6FC1B69A924CF2AD93E0188E0F5BB057AC0B73D972E
-```
-
-**Linux / macOS (Bash):**
-```bash
-# Create destination directory if needed
-mkdir -p analysis/models/legal_bert_v3.3.0
-
-# Download model checkpoint weights (~438 MB)
-curl -L -o analysis/models/legal_bert_v3.3.0/model.safetensors "https://github.com/AroKrishna/Smart_Contract_Analyser/releases/download/v3.3.0/model.safetensors"
-
-# Verify SHA-256 checksum
-# Linux:
-sha256sum analysis/models/legal_bert_v3.3.0/model.safetensors
-# macOS:
-shasum -a 256 analysis/models/legal_bert_v3.3.0/model.safetensors
-# Expected output: 4c5d1c1caf6f42e38173d6fc1b69a924cf2ad93e0188e0f5bb057ac0b73d972e
-```
-
-#### Option C: Automated Runtime Acquisition via Environment Variables
-Configure your `.env` with:
-```bash
-MODEL_WEIGHTS_URL=https://github.com/AroKrishna/Smart_Contract_Analyser/releases/download/v3.3.0/model.safetensors
-EXPECTED_MODEL_SHA256=4c5d1c1caf6f42e38173d6fc1b69a924cf2ad93e0188e0f5bb057ac0b73d972e
-```
-On boot or first request, the backend engine safely downloads the weights into cache, verifies the SHA-256 checksum, and performs an atomic file swap.
-
-#### Strict Model Integrity Gating
-If model weights are missing or have an invalid checksum, the system **never generates mock, simulated, or rule-substituted predictions**:
-- `GET /ready` returns `HTTP 503 Service Unavailable` with `"status": "not_ready"`.
-- `POST /api/v1/analyze` returns transparent `"status": "model_unavailable"` with exact dataset readiness diagnostics.
-Once the valid checkpoint is present:
-```bash
-curl http://127.0.0.1:8000/ready
-# Returns HTTP 200: {"status":"ready","checkpointName":"legal_bert_v3.3.0", ...}
-```
+Verify the hash:
+- **Windows (PowerShell)**: `(Get-FileHash -Algorithm SHA256 analysis\models\legal_bert_v3.3.0\model.safetensors).Hash`
+- **Linux**: `sha256sum analysis/models/legal_bert_v3.3.0/model.safetensors`
+- **macOS**: `shasum -a 256 analysis/models/legal_bert_v3.3.0/model.safetensors`
 
 ---
 
-### 4. Start the FastAPI Backend (Terminal 1)
+### Step 4: Install Frontend Dependencies
 
-**Windows (PowerShell):**
-```powershell
-# Create and activate virtual environment
-python -m venv .venv
-.venv\Scripts\Activate.ps1
+In a new terminal (or navigate to `frontend`):
 
-# Install backend dependencies
-pip install -r requirements.txt
-
-# Launch API server on port 8000
-uvicorn backend.main:app --host 127.0.0.1 --port 8000 --reload
-```
-
-**Linux / macOS (Bash):**
-```bash
-# Create and activate virtual environment
-python3 -m venv .venv
-source .venv/bin/activate
-
-# Install backend dependencies
-pip install -r requirements.txt
-
-# Launch API server on port 8000
-uvicorn backend.main:app --host 127.0.0.1 --port 8000 --reload
-```
-
-To stop the backend service: press `Ctrl + C` in the backend terminal.
-
-#### Verified Local Backend Endpoints:
-- **Backend Health Check**: [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health)
-- **Model Readiness Probe**: [http://127.0.0.1:8000/ready](http://127.0.0.1:8000/ready)
-- **Interactive Swagger Docs**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
-- **ReDoc API Documentation**: [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/redoc)
-
----
-
-### 5. Start the React Frontend (Terminal 2)
-
-In a second terminal:
-
-**Windows / Linux / macOS:**
 ```bash
 cd frontend
 npm install
+cd ..
+```
+
+---
+
+### Step 5: Start the Backend Service (Terminal 1)
+
+In your activated Python environment from the repository root:
+
+```bash
+uvicorn backend.main:app --host 127.0.0.1 --port 8000 --reload
+```
+
+The service will bind strictly to local loopback (`127.0.0.1`).
+
+#### Verify Backend Status:
+- **Health Check**: [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health) (returns `{"status":"healthy","engine":"legal_bert_ml_engine",...}`)
+- **Model Readiness Probe**: [http://127.0.0.1:8000/ready](http://127.0.0.1:8000/ready) (returns `{"status":"ready","checkpointName":"legal_bert_v3.3.0",...}`)
+- **Interactive OpenAPI Docs**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+
+---
+
+### Step 6: Start the Frontend Application (Terminal 2)
+
+In a second terminal:
+
+```bash
+cd frontend
 npm run dev
 ```
 
-To stop the frontend service: press `Ctrl + C` in the frontend terminal.
-
-#### Verified Local Frontend URL:
-- **Frontend Web Application**: [http://localhost:5173/](http://localhost:5173/)
-
-The Vite development server automatically proxies `/api`, `/health`, and `/ready` requests to the local backend at `http://127.0.0.1:8000`.
+Open your browser at:
+**[http://localhost:5173/](http://localhost:5173/)** (or [http://127.0.0.1:5173/](http://127.0.0.1:5173/))
 
 ---
 
-### 6. Local First-Use Walkthrough
+## 🖥️ Using the Application (No Account Required)
 
-1. **Access Application**: Navigate to [http://localhost:5173/](http://localhost:5173/) in your web browser.
-2. **Account Registration / Login**:
-   - Register a new local account at `/register` (name, email, password, organization), or:
-   - Log in using seeded development credentials:
-     - **Auditor**: `auditor@enterprise.com` / `AuditorPass2026!`
-     - **Admin**: `admin@legal-ai.io` / `AdminPass2026!`
-3. **Submit a Contract for Analysis**:
-   - Navigate to `/analysis/new`.
-   - Paste raw Solidity code or upload a `.sol` contract file (sample contracts are provided in `sample_contracts/` and the UI sample buttons).
-   - Click **Run Legal-BERT Analysis**.
-4. **Inspect Real-Time Analysis Progress**:
-   - The interactive stepper tracks the asynchronous pipeline stages: Syntax Validation ➔ AST Clause Extraction ➔ Neural Legal-BERT Inference ➔ XAI Token Attribution (SHAP/LIME) ➔ Compliance Synthesis & Persistence.
-5. **Review Analysis Results**:
-   - View the overall composite risk score and category breakdown (Privacy, Termination, Legal Compliance, Liability, Payment / Financial).
-   - Inspect the interactive code viewer with syntax highlighting and hazard line badges.
-   - Click clauses to review the **Explainable AI (XAI)** token attributions (SHAP marginal contribution and LIME interpretability breakdown).
-   - Review side-by-side remediation recommendations (risky clause vs safer alternative).
-6. **Query the AI Legal Assistant**:
-   - In the results panel, chat with the context-scoped AI assistant. The assistant answers questions strictly grounded in the analyzed contract's findings and statutory matrix.
-7. **Export Audit Reports**:
-   - Download professional **PDF** and editable **DOCX** audit reports directly from `/reports` or the results dashboard.
-8. **Manage History & Data Deletion**:
-   - View historical audits at `/history`.
-   - Perform cascading deletion of any audit: removes the database record, physical uploaded file, and background jobs permanently from local storage.
+1. **Direct Access**: When you open the application, you land directly on the **Auditor Workspace** dashboard. No login or registration screens appear.
+2. **Submit a Contract**: Click **New Audit** or navigate to `/analysis/new`. Either upload a `.sol` file or paste Solidity source code directly into the editor. Sample contract templates (Escrow, Vault, Token) are provided as quick-load buttons.
+3. **Run Analysis**: Click **Run Legal-BERT Analysis**. The live asynchronous stepper will track:
+   - Syntax validation
+   - AST clause extraction
+   - Neural Legal-BERT multi-category classification
+   - Real-time token saliency (SHAP & LIME computation)
+   - Persistence into the local SQLite database
+4. **Explore Explainability (XAI)**:
+   - View composite and per-category risk scores (Low, Medium, High, Critical).
+   - Review the syntax-highlighted contract source with flagged risk line badges.
+   - Click clauses to inspect SHAP marginal contributions and LIME local surrogate weights.
+   - Read specific statutory explanations and actionable code remediations.
+5. **AI Legal Assistant**: Chat with the integrated assistant in the results pane. Answers are strictly grounded in the analyzed contract's findings.
+6. **Download Reports**: Click **Export PDF** or **Export DOCX** to generate executive compliance audit reports.
+7. **View Audit History**: Open `/history` to view all saved analyses. Filter by risk tier or search by contract name.
+8. **Delete Analyses**: Click **Delete** on any audit card to permanently purge its database entry and associated uploaded source file from local disk.
 
 ---
 
-### 7. Local Storage & Data Lifecycle Locations
+## 📁 Local Data Storage & Privacy
 
-All application state, user accounts, uploaded files, and model weights remain strictly on your local computer:
+All application state is stored locally on your machine and never leaves your computer:
 
-| Asset | Local Location | Description |
+| Data Asset | Exact Local Location | Purpose |
 |:---|:---|:---|
-| **Database** | `backend/data/transient_smart_contract_analyser.db` | SQLite database storing accounts, analysis metadata, jobs, and file references. |
-| **Uploaded Files** | `backend/data/storage/<user_id>/` | User-sandboxed local directory holding uploaded `.sol` contract source files. |
-| **Model Checkpoint** | `analysis/models/legal_bert_v3.3.0/` | Fine-tuned Legal-BERT multi-label model weights (`model.safetensors`, `config.json`, tokenizer). |
-| **Generated Reports** | Streamed dynamically | PDF and DOCX reports are generated on-the-fly via ReportLab and python-docx. |
+| **SQLite Database** | `backend/data/transient_smart_contract_analyser.db` | Stores audit records, risk scores, findings, and metadata. |
+| **Uploaded Contracts** | `backend/data/storage/local_user/` | Physical storage directory for uploaded `.sol` files. |
+| **Model Weights** | `analysis/models/legal_bert_v3.3.0/model.safetensors` | Neural weights for the fine-tuned classifier. |
+| **Generated Reports** | Dynamically streamed | PDF and DOCX reports are generated in-memory on demand. |
+
+### How to Reset Local Data
+- **In-App Reset**: Click **Delete** next to any audit in `/history` to remove it cleanly.
+- **Complete Local Reset**: If you wish to wipe all past audits and uploads, stop the backend and delete the local database file:
+  ```powershell
+  # Windows
+  Remove-Item backend\data\transient_smart_contract_analyser.db -ErrorAction SilentlyContinue
+  Remove-Item backend\data\storage\local_user\* -Recurse -Force -ErrorAction SilentlyContinue
+  ```
+  ```bash
+  # Linux / macOS
+  rm -f backend/data/transient_smart_contract_analyser.db
+  rm -rf backend/data/storage/local_user/*
+  ```
+  On next backend startup, a fresh SQLite database schema will be automatically created.
 
 ---
 
-### 8. Verification & Running the Tests
+## 🔧 Troubleshooting
 
-To run the complete automated test suite (85 tests covering API contracts, authentication, ownership isolation, job lifecycles, and storage sandboxing):
+| Issue | Cause | Solution |
+|:---|:---|:---|
+| **Port 8000 already in use** | An old backend process is still running | Find and terminate the process using port 8000 (`Get-NetTCPConnection -LocalPort 8000` on Windows, or `lsof -i :8000` on Linux/Mac), or run on another port with `--port 8001` (and update frontend proxy in `frontend/vite.config.js`). |
+| **`/ready` returns 503 "not_ready"** | Model weights missing or invalid hash | Run `python scripts/setup_model.py` to download and verify `model.safetensors`. |
+| **Frontend shows "Backend Offline"** | Backend server is not running on port 8000 | Verify that Terminal 1 is running `uvicorn backend.main:app --host 127.0.0.1 --port 8000` and `http://127.0.0.1:8000/health` responds. |
+| **Git Clone Permission Denied** | Target repository is private | Request that the owner add your GitHub username under **Repository Settings ➔ Collaborators**. |
+| **Analysis job takes 15–30 seconds** | CPU computation of SHAP/LIME | This is normal behavior: calculating genuine Shapley values and LIME surrogate models on CPU takes 10–25 seconds depending on contract length. |
+
+---
+
+## 🧪 Automated Verification Suite
+
+To verify the backend API contracts and end-to-end unauthenticated local workflows:
 ```bash
-python -m pytest tests/
+python -m pytest tests/test_api.py tests/test_end_to_end_workflow.py
 ```
 
-To run the frontend production build verification:
+To verify the frontend production build:
 ```bash
 cd frontend
 npm run build
@@ -364,22 +273,18 @@ npm run build
 
 ---
 
-### 9. Scientific Disclosure & Model Limitations
+## 🔬 Scientific Disclosure & Model Limitations
 
-In accordance with academic and engineering integrity standards:
-
-1. **Dataset Scope & Low-Prevalence Support**:
-   - The fine-tuned Legal-BERT multi-label classifier is trained on a frozen canonical dataset of 58 eligible contracts (38 real-source, 20 synthetic in train).
-   - On the strictly isolated, held-out test split (7 real-source contracts across independent projects `anvil_protocol`, `aragon_vault`, `crytic_not_so_smart_contracts`, and `virtuals_genesis`), real-world prevalence of certain hazards (**Privacy**, **Liability**, and **Payment / Financial**) is zero.
-   - For these zero-support categories, recall and F1 cannot be mathematically evaluated; they are transparently reported as inconclusive rather than substituting fabricated scores.
-2. **Model Classification Scores**:
-   - On CPU inference with the small sample size, predicted logits fall below the uncalibrated 0.50 threshold on test data. See [docs/LEGAL_BERT_EXPERIMENT_REPORT.md](docs/LEGAL_BERT_EXPERIMENT_REPORT.md) for full empirical loss curves and evaluation tables.
-3. **Decision-Support Boundary**:
-   - The platform provides operational pre-deployment risk triaging for developers and auditors.
-   - Output does not constitute judicial rulings, binding legal opinions, or guarantees of statutory compliance under any jurisdiction. All automated findings should be reviewed by qualified legal counsel.
+1. **Small-Scale Training Distribution**:
+   - The fine-tuned Legal-BERT multi-category classifier is trained on a frozen canonical dataset of 58 smart contracts (38 real-source, 20 synthetic training instances).
+   - On strictly isolated held-out test contracts, natural prevalence of certain rare hazards (Privacy, Liability, and Payment / Financial) is low. For zero-support categories, metrics are transparently marked as inconclusive rather than presenting fabricated accuracy numbers.
+2. **Deterministic Fallback Transparency**:
+   - The platform never fabricates model verdicts. When the model is absent, the system transparently indicates `model_unavailable` with exact dataset readiness diagnostics.
+3. **Interpretability Scope**:
+   - SHAP values and LIME weights are computed over normalized AST code tokens. They highlight clauses statistically correlated with operational hazards, but do not replace comprehensive human code review.
 
 ---
 
 ## 📄 License
-This project is licensed under the MIT License.
 
+This project is licensed under the MIT License.

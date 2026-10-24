@@ -3,80 +3,34 @@ import api from '../services/api';
 
 const AuthContext = createContext(null);
 
+const DEFAULT_LOCAL_USER = {
+  id: 'local_user',
+  name: 'Local Auditor',
+  email: 'auditor@local.device',
+  organization: 'Local Workspace',
+  role: 'auditor',
+};
+
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [authError, setAuthError] = useState(null);
+  const [user, setUser] = useState(DEFAULT_LOCAL_USER);
+  const [isLoading] = useState(false);
+  const [authError] = useState(null);
 
-  // Restore active user session on app load
-  const loadUser = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const data = await api.getCurrentUser();
-      if (data?.user) {
-        setUser(data.user);
-      } else {
-        setUser(null);
-      }
-    } catch {
-      setUser(null);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadUser();
-  }, [loadUser]);
-
-  const login = async (email, password) => {
-    setAuthError(null);
-    try {
-      const data = await api.login(email, password);
-      if (data?.user) {
-        setUser(data.user);
-        return data.user;
-      }
-      throw new Error(data?.message || 'Login failed');
-    } catch (err) {
-      setAuthError(err.message);
-      throw err;
-    }
+  const login = async () => {
+    return DEFAULT_LOCAL_USER;
   };
 
-  const register = async (email, password, fullName, organization) => {
-    setAuthError(null);
-    try {
-      const data = await api.register(email, password, fullName, organization);
-      if (data?.user) {
-        setUser(data.user);
-        return data.user;
-      }
-      throw new Error(data?.message || 'Registration failed');
-    } catch (err) {
-      setAuthError(err.message);
-      throw err;
-    }
+  const register = async () => {
+    return DEFAULT_LOCAL_USER;
   };
 
   const logout = async () => {
-    try {
-      await api.logout();
-    } finally {
-      setUser(null);
-      setAuthError(null);
-    }
+    // Single user local session reset
+    setUser(DEFAULT_LOCAL_USER);
   };
 
   const refreshProfile = async () => {
-    try {
-      const data = await api.getCurrentUser();
-      if (data?.user) {
-        setUser(data.user);
-      }
-    } catch {
-      // Keep existing user if transient network failure
-    }
+    setUser(DEFAULT_LOCAL_USER);
   };
 
   return (
@@ -84,7 +38,7 @@ export const AuthProvider = ({ children }) => {
       value={{
         user,
         isLoading,
-        isAuthenticated: Boolean(user),
+        isAuthenticated: true,
         authError,
         login,
         register,
