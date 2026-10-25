@@ -10,7 +10,6 @@ import {
   Cpu,
   Copy,
   Check,
-  Info,
   Loader2,
   AlertCircle,
   PlusCircle,
@@ -77,10 +76,10 @@ const AnalysisResult = () => {
         console.warn('API lookup by ID failed:', err);
       }
 
-      // 3. In Phase 1 no-login mode: Do NOT fall back to static mock data
+      // 3. In local no-login mode: Do NOT fall back to static mock data
       if (!isCancelled) {
         setLoadError(
-          `Audit report '${id}' could not be located. In Phase 1, uploaded contracts and analysis results are stored temporarily in memory (30-minute retention) and are not saved permanently.`
+          `Audit report '${id}' could not be located in local storage or active session cache.`
         );
         setLoading(false);
       }
@@ -173,7 +172,6 @@ const AnalysisResult = () => {
 
   const contractName = contract.name || contract.contractName || 'Contract.sol';
   const analysisId = contract.id || contract.analysisId || id;
-  const disclosures = contract.modelDisclosures || {};
 
   return (
     <div className="space-y-8">
@@ -201,7 +199,7 @@ const AnalysisResult = () => {
             </div>
 
             <p className="text-xs text-slate-400 mt-0.5">
-              Audit ID: <span className="font-mono text-slate-300">{analysisId}</span> • Temporary in-memory session (Phase 1)
+              Audit ID: <span className="font-mono text-slate-300">{analysisId}</span> • Local Audit Workspace
             </p>
           </div>
         </div>
@@ -405,7 +403,7 @@ const AnalysisResult = () => {
             }`}
           >
             <MessageSquare className="w-4 h-4 text-emerald-400" />
-            AI Legal Assistant (Phase 6)
+            AI Legal Assistant
           </button>
         </div>
       </div>

@@ -11,7 +11,6 @@ const DashboardNavbar = ({ onOpenSidebar }) => {
     if (pathname.startsWith('/analysis/')) return 'Analysis Result';
     if (pathname === '/history') return 'Audit History';
     if (pathname === '/reports') return 'Audit Reports';
-    if (pathname === '/profile') return 'Auditor Profile';
     if (pathname === '/settings') return 'Workspace Settings';
     return 'Dashboard';
   };

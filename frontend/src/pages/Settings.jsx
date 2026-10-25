@@ -1,25 +1,49 @@
 import { useState } from 'react';
 import {
-  Bell,
-  FileCheck,
   Check,
   Moon,
+  Sun,
+  Laptop,
+  Shield,
+  Info,
+  ServerOff,
 } from 'lucide-react';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
+import { useTheme } from '../context/ThemeContext';
 
 const Settings = () => {
-  const [sensitivity, setSensitivity] = useState(65);
-  const [alertCritical, setAlertCritical] = useState(true);
-  const [alertWeekly, setAlertWeekly] = useState(false);
-  const [defaultFormat, setDefaultFormat] = useState('PDF');
-  const [strictMode, setStrictMode] = useState(true);
+  const { theme, setTheme } = useTheme();
+  const [selectedTheme, setSelectedTheme] = useState(theme);
+  const [defaultFormat, setDefaultFormat] = useState(() => {
+    try {
+      const stored = localStorage.getItem('sma_settings');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed.defaultFormat) return parsed.defaultFormat;
+      }
+    } catch (e) {
+      console.warn('Failed to load local settings:', e);
+    }
+    return 'PDF';
+  });
   const [saved, setSaved] = useState(false);
 
   const handleSave = (e) => {
     e.preventDefault();
+    setTheme(selectedTheme);
+    try {
+      const payload = {
+        defaultFormat,
+        theme: selectedTheme,
+        updatedAt: new Date().toISOString(),
+      };
+      localStorage.setItem('sma_settings', JSON.stringify(payload));
+    } catch (e) {
+      console.warn('Failed to save settings:', e);
+    }
     setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+    setTimeout(() => setSaved(false), 3000);
   };
 
   return (
@@ -30,148 +54,156 @@ const Settings = () => {
           Workspace Settings
         </h2>
         <p className="text-xs sm:text-sm text-slate-400 mt-1">
-          Configure Legal-BERT model sensitivity, audit report templates, and notification triggers
+          Configure local workspace appearance, report export defaults, and inspect model calibration parameters.
         </p>
       </div>
 
       {saved && (
         <div className="p-3.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-400 flex items-center gap-2">
           <Check className="w-4 h-4 shrink-0" />
-          <span>Workspace preferences updated successfully.</span>
+          <span>Workspace preferences saved successfully to local storage.</span>
         </div>
       )}
 
       <form onSubmit={handleSave} className="space-y-6">
-        {/* Section 1: AI Model Classification Threshold */}
+        {/* Section 1: Appearance & Theme */}
         <Card
-          title="Legal-BERT Classification Sensitivity"
-          subtitle="Tune the probability threshold used to trigger High and Critical risk warnings"
+          title="Display Theme"
+          subtitle="Choose your preferred workspace color theme"
           className="border-slate-800 bg-slate-900/60 p-6 space-y-4"
         >
-          <div className="space-y-2">
-            <div className="flex justify-between items-center text-xs">
-              <span className="text-slate-300 font-medium">
-                Decision Boundary Threshold:
-              </span>
-              <span className="font-mono text-blue-400 font-bold text-sm">
-                {sensitivity}%
-              </span>
-            </div>
-
-            <input
-              type="range"
-              min="40"
-              max="90"
-              value={sensitivity}
-              onChange={(e) => setSensitivity(Number(e.target.value))}
-              className="w-full h-2 bg-slate-950 rounded-lg appearance-none cursor-pointer accent-blue-500 border border-slate-800"
-            />
-
-            <div className="flex justify-between text-[11px] text-slate-400 pt-1">
-              <span>More Sensitive (40% - More Flags)</span>
-              <span>Balanced (65%)</span>
-              <span>Strict Precision (90% - High Confidence Only)</span>
-            </div>
-          </div>
-
-          <div className="pt-3 border-t border-slate-800/80">
-            <label className="flex items-start gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={strictMode}
-                onChange={(e) => setStrictMode(e.target.checked)}
-                className="w-4 h-4 mt-0.5 rounded border-slate-700 bg-slate-950 text-blue-600 focus:ring-blue-500/40"
-              />
-              <div>
-                <span className="text-xs font-semibold text-slate-200">
-                  Enable Strict Statutory Consumer Protections Flagging
-                </span>
-                <p className="text-[11px] text-slate-400 mt-0.5">
-                  Flags any unilateral contract freeze or withdrawal hold regardless of governance voting thresholds.
-                </p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <button
+              type="button"
+              onClick={() => setSelectedTheme('dark')}
+              className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${
+                selectedTheme === 'dark'
+                  ? 'border-blue-500 bg-blue-500/10 text-slate-100 shadow-sm'
+                  : 'border-slate-800 bg-slate-950/60 text-slate-400 hover:text-slate-200 hover:border-slate-700'
+              }`}
+            >
+              <div className="p-2 rounded-lg bg-slate-850 text-blue-400">
+                <Moon className="w-4 h-4" />
               </div>
-            </label>
+              <div>
+                <p className="text-xs font-semibold">Dark Theme</p>
+                <p className="text-[10px] text-slate-400">Deep slate interface</p>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setSelectedTheme('light')}
+              className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${
+                selectedTheme === 'light'
+                  ? 'border-blue-500 bg-blue-500/10 text-slate-100 shadow-sm'
+                  : 'border-slate-800 bg-slate-950/60 text-slate-400 hover:text-slate-200 hover:border-slate-700'
+              }`}
+            >
+              <div className="p-2 rounded-lg bg-slate-850 text-amber-400">
+                <Sun className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold">Light Theme</p>
+                <p className="text-[10px] text-slate-400">Clean light contrast</p>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setSelectedTheme('system')}
+              className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${
+                selectedTheme === 'system'
+                  ? 'border-blue-500 bg-blue-500/10 text-slate-100 shadow-sm'
+                  : 'border-slate-800 bg-slate-950/60 text-slate-400 hover:text-slate-200 hover:border-slate-700'
+              }`}
+            >
+              <div className="p-2 rounded-lg bg-slate-850 text-purple-400">
+                <Laptop className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold">System Default</p>
+                <p className="text-[10px] text-slate-400">Follows OS setting</p>
+              </div>
+            </button>
           </div>
         </Card>
 
-        {/* Section 2: Notifications */}
+        {/* Section 2: Audit Report Defaults */}
         <Card
-          title="Audit Notifications"
-          subtitle="Configure real-time notifications for automated contract scans"
+          title="Audit Export Defaults"
+          subtitle="Preferred document format for downloaded compliance audit packages"
+          className="border-slate-800 bg-slate-900/60 p-6 space-y-4"
+        >
+          <div className="max-w-md">
+            <label className="block text-xs font-medium text-slate-300 mb-1.5">
+              Default Download Format
+            </label>
+            <select
+              value={defaultFormat}
+              onChange={(e) => setDefaultFormat(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-200 px-3 py-2.5 focus:outline-none focus:border-blue-500"
+            >
+              <option value="PDF">PDF (Structured Executive Audit Report)</option>
+              <option value="DOCX">DOCX (Editable Legal Draft Document)</option>
+            </select>
+            <p className="text-[11px] text-slate-400 mt-2">
+              You can still choose either format dynamically whenever downloading an individual contract audit report.
+            </p>
+          </div>
+        </Card>
+
+        {/* Section 3: Honest Model Parameters Disclosure */}
+        <Card
+          title="Legal-BERT Model Calibration"
+          subtitle="Inference parameters and decision boundaries used by the local engine"
           className="border-slate-800 bg-slate-900/60 p-6 space-y-4"
         >
           <div className="space-y-3">
-            <label className="flex items-center justify-between p-3 rounded-lg bg-slate-950/60 border border-slate-800/80 cursor-pointer">
-              <div className="flex items-center gap-3">
-                <Bell className="w-4 h-4 text-slate-400" />
-                <div>
-                  <span className="text-xs font-medium text-slate-200">
-                    Immediate Email Alert for Critical Risks
+            <div className="p-3.5 rounded-lg bg-slate-950/60 border border-slate-800/80 flex items-start gap-3">
+              <Shield className="w-4 h-4 text-blue-400 mt-0.5 shrink-0" />
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-slate-200">
+                    Decision Boundary Threshold: 50% (0.50 Sigmoid)
                   </span>
-                  <p className="text-[11px] text-slate-400">
-                    Trigger alert when unilateral selfdestruct or unlimited fee alterations are detected.
-                  </p>
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                    Calibrated
+                  </span>
                 </div>
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  The local inference engine evaluates multi-label probabilities across 5 legal taxonomies (Termination, Liability, Payment / Financial, Legal Compliance, Privacy). Neural probabilities at or above 0.50 trigger category hazard flags.
+                </p>
               </div>
-              <input
-                type="checkbox"
-                checked={alertCritical}
-                onChange={(e) => setAlertCritical(e.target.checked)}
-                className="w-4 h-4 rounded border-slate-700 bg-slate-950 text-blue-600 focus:ring-blue-500/40"
-              />
-            </label>
+            </div>
 
-            <label className="flex items-center justify-between p-3 rounded-lg bg-slate-950/60 border border-slate-800/80 cursor-pointer">
-              <div className="flex items-center gap-3">
-                <FileCheck className="w-4 h-4 text-slate-400" />
-                <div>
-                  <span className="text-xs font-medium text-slate-200">
-                    Weekly Audit Digest
-                  </span>
-                  <p className="text-[11px] text-slate-400">
-                    Summary of all Solidity contracts analyzed in the previous 7 days.
-                  </p>
-                </div>
+            <div className="p-3.5 rounded-lg bg-slate-950/60 border border-slate-800/80 flex items-start gap-3">
+              <Info className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
+              <div className="space-y-1">
+                <span className="text-xs font-semibold text-slate-200">
+                  Fixed Model Weights
+                </span>
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  Inference is determined by the trained model checkpoint (<code>legal_bert_v3.3.0</code>) and SHAP/LIME token attribution pipelines. Classification boundaries are fixed to maintain deterministic reproducibility across audits.
+                </p>
               </div>
-              <input
-                type="checkbox"
-                checked={alertWeekly}
-                onChange={(e) => setAlertWeekly(e.target.checked)}
-                className="w-4 h-4 rounded border-slate-700 bg-slate-950 text-blue-600 focus:ring-blue-500/40"
-              />
-            </label>
+            </div>
           </div>
         </Card>
 
-        {/* Section 3: Interface & Export Preferences */}
+        {/* Section 4: Offline Local Operation Notice */}
         <Card
-          title="Report & Display Defaults"
-          subtitle="Set default export format and visual theme preferences"
+          title="Offline Services & Telemetry"
+          subtitle="Status of external network services and notification webhooks"
           className="border-slate-800 bg-slate-900/60 p-6 space-y-4"
         >
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1.5">
-                Default Export Format
-              </label>
-              <select
-                value={defaultFormat}
-                onChange={(e) => setDefaultFormat(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-200 px-3 py-2 focus:outline-none focus:border-blue-500"
-              >
-                <option value="PDF">PDF (Structured Executive Audit)</option>
-                <option value="DOCX">DOCX (Editable Legal Draft)</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-300 mb-1.5">
-                Active Theme
-              </label>
-              <div className="flex items-center gap-2 p-2 bg-slate-900 border border-slate-800 rounded-lg text-xs text-slate-300">
-                <Moon className="w-4 h-4 text-blue-400" />
-                <span>Enterprise Dark Slate (Locked)</span>
-              </div>
+          <div className="p-3.5 rounded-lg bg-slate-950/40 border border-slate-800/60 flex items-start gap-3 text-xs text-slate-400">
+            <ServerOff className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <p className="text-slate-300 font-medium">External Email Relays Disabled</p>
+              <p className="text-[11px] leading-relaxed">
+                This local-first single-user application runs entirely on your machine. External email dispatchers, cloud telemetry, and third-party tracking are disabled. All contracts, analyses, and embeddings remain strictly local in your workspace SQLite database.
+              </p>
             </div>
           </div>
         </Card>

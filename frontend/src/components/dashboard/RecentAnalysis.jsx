@@ -40,7 +40,18 @@ const RecentAnalysis = ({ contracts = [] }) => {
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-800/60">
-          {contracts.map((item) => (
+          {contracts.length === 0 ? (
+            <tr>
+              <td colSpan="5" className="py-8 px-4 text-center text-slate-400">
+                <FileCode className="w-6 h-6 mx-auto mb-2 text-slate-500 opacity-60" />
+                <p className="font-medium text-slate-300">No contract analyses yet</p>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Submit a Solidity contract to generate Legal-BERT risk assessments.
+                </p>
+              </td>
+            </tr>
+          ) : (
+            contracts.map((item) => (
             <tr
               key={item.id}
               className="hover:bg-slate-850/40 transition-colors group"
@@ -88,7 +99,7 @@ const RecentAnalysis = ({ contracts = [] }) => {
                 </Link>
               </td>
             </tr>
-          ))}
+          )))}
         </tbody>
       </table>
     </Card>

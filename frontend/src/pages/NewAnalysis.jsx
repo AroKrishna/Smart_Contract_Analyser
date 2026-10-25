@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   FileCode,
   Upload,
@@ -11,14 +11,12 @@ import {
   Cpu,
   RotateCcw,
   CheckCircle2,
-  XCircle,
 } from 'lucide-react';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
 import Card from '../components/common/Card';
 import Textarea from '../components/common/Textarea';
 import AnalysisProgress from '../components/analysis/AnalysisProgress';
-import { PIPELINE_STAGES } from '../utils/constants';
 import { api } from '../services/api';
 
 const SAMPLE_SOL_CODE = `// SPDX-License-Identifier: MIT

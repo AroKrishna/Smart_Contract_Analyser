@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 
 import PublicLayout from './layouts/PublicLayout';
 import DashboardLayout from './layouts/DashboardLayout';
@@ -14,9 +15,10 @@ import Settings from './pages/Settings';
 
 function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <Routes>
+    <ThemeProvider>
+      <BrowserRouter>
+        <AuthProvider>
+          <Routes>
           {/* Public Landing Route */}
           <Route element={<PublicLayout />}>
             <Route path="/" element={<Landing />} />
@@ -43,6 +45,7 @@ function App() {
         </Routes>
       </AuthProvider>
     </BrowserRouter>
+  </ThemeProvider>
   );
 }
 

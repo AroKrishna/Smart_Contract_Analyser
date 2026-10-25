@@ -266,12 +266,6 @@ export const api = {
     });
   },
 
-  /**
-   * Part 5: Retrieve status and progress of an asynchronous analysis job
-   */
-  async getJobStatus(jobId) {
-    return await request(`/api/v1/jobs/${jobId}`);
-  },
 
   /**
    * Part 5: Cancel an in-flight or queued analysis job
@@ -362,7 +356,7 @@ export const api = {
     try {
       response = await fetch(url);
     } catch (err) {
-      throw new Error(`Unable to reach the report download service. Please verify backend connectivity.`);
+      throw new Error(`Unable to reach the report download service. Please verify backend connectivity.`, { cause: err });
     }
 
     if (!response.ok) {
@@ -393,9 +387,6 @@ export const api = {
     return await request(`/api/v1/analyze/${analysisId}`, { method: 'DELETE' });
   },
 
-  async discardAnalysis(analysisId) {
-    return this.deleteAnalysis(analysisId);
-  },
 
   /**
    * Phase 4: Download uploaded/stored Solidity contract source file

@@ -14,30 +14,35 @@ import StatCard from '../components/dashboard/StatCard';
 import RiskOverview from '../components/dashboard/RiskOverview';
 import RecentAnalysis from '../components/dashboard/RecentAnalysis';
 import Button from '../components/common/Button';
-import { mockDashboardStats, mockContracts } from '../data/mockData';
-import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 
 const Dashboard = () => {
   const [stats, setStats] = useState(null);
   const [recentAnalyses, setRecentAnalyses] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     let isCancelled = false;
 
     async function fetchStats() {
       setLoading(true);
+      setError(null);
       try {
         const data = await api.getUserStats();
         if (!isCancelled && data) {
           setStats(data);
           if (data.recentAnalyses && data.recentAnalyses.length > 0) {
             setRecentAnalyses(data.recentAnalyses);
+          } else {
+            setRecentAnalyses([]);
           }
         }
       } catch (err) {
         console.warn('Failed to load local dashboard stats:', err);
+        if (!isCancelled) {
+          setError(err.message || 'Unable to load local statistics');
+        }
       } finally {
         if (!isCancelled) setLoading(false);
       }
@@ -101,9 +106,9 @@ const Dashboard = () => {
         <StatCard
           title="Contracts Audited"
           value={activeStats.totalAnalyzed ?? 0}
-          subtitle={isAuthenticated ? "Your analyzed Solidity contracts" : "Total Solidity contracts analyzed"}
+          subtitle="Total Solidity contracts analyzed"
           icon={FileCheck}
-          badgeText={isAuthenticated ? "Personal" : "Demo"}
+          badgeText="Local"
         />
 
         <StatCard
@@ -143,7 +148,11 @@ const Dashboard = () => {
         </div>
 
         <div className="space-y-6">
-          <RiskOverview />
+          <RiskOverview
+            distribution={stats?.categoryDistribution || []}
+            loading={loading}
+            error={error}
+          />
 
           {/* Quick Start Card */}
           <div className="p-5 rounded-xl border border-blue-900/40 bg-blue-950/20 text-slate-300 space-y-3">

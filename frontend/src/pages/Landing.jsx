@@ -142,7 +142,7 @@ const Landing = () => {
       {/* ============================================================ */}
       {/* 2. THE PROBLEM: BEYOND CODE VULNERABILITIES                  */}
       {/* ============================================================ */}
-      <section className="py-20 border-b border-slate-800/60 bg-slate-950/50">
+      <section id="methodology" className="py-20 border-b border-slate-800/60 bg-slate-950/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl mx-auto text-center mb-14">
             <h2 className="text-2xl sm:text-3xl font-bold text-slate-100">

@@ -5,7 +5,6 @@ import {
   Search,
   Filter,
   ArrowUpRight,
-  ShieldCheck,
   Calendar,
   Database,
   Trash2,
@@ -15,12 +14,9 @@ import Badge from '../components/common/Badge';
 import Input from '../components/common/Input';
 import Button from '../components/common/Button';
 import EmptyState from '../components/common/EmptyState';
-import { mockContracts } from '../data/mockData';
-import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 
 const History = () => {
-  const { user, isAuthenticated } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRiskLevel, setSelectedRiskLevel] = useState('All');
   const [liveAudits, setLiveAudits] = useState([]);
@@ -72,20 +68,7 @@ const History = () => {
     }
   };
 
-  // For authenticated users, display strictly their persistent audits from the backend
-  const displayContracts = isAuthenticated
-    ? liveAudits
-    : mockContracts.filter((contract) => {
-        const matchesSearch =
-          contract.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          contract.contractType.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          contract.description.toLowerCase().includes(searchQuery.toLowerCase());
-
-        const matchesRisk =
-          selectedRiskLevel === 'All' || contract.overallRiskLevel === selectedRiskLevel;
-
-        return matchesSearch && matchesRisk;
-      });
+  const displayContracts = liveAudits;
 
   return (
     <div className="space-y-6">
@@ -150,7 +133,11 @@ const History = () => {
         className="border-slate-800 bg-slate-900/60"
         contentClassName="p-0 overflow-x-auto"
       >
-        {displayContracts.length === 0 ? (
+        {loading ? (
+          <div className="py-12 text-center text-xs text-slate-400">
+            <p>Loading audit archive from local database...</p>
+          </div>
+        ) : displayContracts.length === 0 ? (
           <EmptyState
             title="No Audits Found"
             description="No smart contracts match your search term or risk category filter."
@@ -230,17 +217,15 @@ const History = () => {
                           <span>View</span>
                           <ArrowUpRight className="w-3.5 h-3.5" />
                         </Link>
-                        {isAuthenticated && (
-                          <button
-                            type="button"
-                            onClick={(e) => handleDelete(auditId, e)}
-                            disabled={deletingId === auditId}
-                            title="Delete audit"
-                            className="text-slate-500 hover:text-red-400 p-1 rounded hover:bg-slate-800 transition-colors disabled:opacity-50"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        )}
+                        <button
+                          type="button"
+                          onClick={(e) => handleDelete(auditId, e)}
+                          disabled={deletingId === auditId}
+                          title="Delete audit"
+                          className="text-slate-500 hover:text-red-400 p-1 rounded hover:bg-slate-800 transition-colors disabled:opacity-50"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </td>
                   </tr>

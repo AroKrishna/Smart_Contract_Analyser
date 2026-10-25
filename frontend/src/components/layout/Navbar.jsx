@@ -1,15 +1,11 @@
 import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { ShieldCheck, Menu, X, ArrowRight } from 'lucide-react';
 import { APP_NAME } from '../../utils/constants';
-import { useAuth } from '../../context/AuthContext';
 import Button from '../common/Button';
 
 const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const location = useLocation();
-  const { isAuthenticated } = useAuth();
-  const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-slate-800/80 bg-slate-950/90 backdrop-blur-md">
@@ -26,22 +22,20 @@ const Navbar = () => {
           </Link>
 
           {/* Desktop Nav Links (Visible on main landing page) */}
-          {!isAuthPage && (
-            <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-400">
-              <a href="#pipeline" className="hover:text-slate-200 transition-colors">
-                AI Pipeline
-              </a>
-              <a href="#risk-categories" className="hover:text-slate-200 transition-colors">
-                Risk Categories
-              </a>
-              <a href="#xai" className="hover:text-slate-200 transition-colors">
-                Explainability (XAI)
-              </a>
-              <a href="#methodology" className="hover:text-slate-200 transition-colors">
-                Auditing Scope
-              </a>
-            </nav>
-          )}
+          <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-400">
+            <a href="#pipeline" className="hover:text-slate-200 transition-colors">
+              AI Pipeline
+            </a>
+            <a href="#risk-categories" className="hover:text-slate-200 transition-colors">
+              Risk Categories
+            </a>
+            <a href="#xai" className="hover:text-slate-200 transition-colors">
+              Explainability (XAI)
+            </a>
+            <a href="#methodology" className="hover:text-slate-200 transition-colors">
+              Auditing Scope
+            </a>
+          </nav>
 
           {/* Right Action Buttons */}
           <div className="hidden sm:flex items-center gap-3">
@@ -74,38 +68,36 @@ const Navbar = () => {
       {/* Mobile Dropdown Menu */}
       {mobileMenuOpen && (
         <div className="md:hidden border-b border-slate-800 bg-slate-950 px-4 py-5 space-y-4">
-          {!isAuthPage && (
-            <div className="flex flex-col space-y-3 text-sm text-slate-300">
-              <a
-                href="#pipeline"
-                onClick={() => setMobileMenuOpen(false)}
-                className="hover:text-white py-1"
-              >
-                AI Pipeline
-              </a>
-              <a
-                href="#risk-categories"
-                onClick={() => setMobileMenuOpen(false)}
-                className="hover:text-white py-1"
-              >
-                Risk Categories
-              </a>
-              <a
-                href="#xai"
-                onClick={() => setMobileMenuOpen(false)}
-                className="hover:text-white py-1"
-              >
-                Explainability (XAI)
-              </a>
-              <a
-                href="#methodology"
-                onClick={() => setMobileMenuOpen(false)}
-                className="hover:text-white py-1"
-              >
-                Auditing Scope
-              </a>
-            </div>
-          )}
+          <div className="flex flex-col space-y-3 text-sm text-slate-300">
+            <a
+              href="#pipeline"
+              onClick={() => setMobileMenuOpen(false)}
+              className="hover:text-white py-1"
+            >
+              AI Pipeline
+            </a>
+            <a
+              href="#risk-categories"
+              onClick={() => setMobileMenuOpen(false)}
+              className="hover:text-white py-1"
+            >
+              Risk Categories
+            </a>
+            <a
+              href="#xai"
+              onClick={() => setMobileMenuOpen(false)}
+              className="hover:text-white py-1"
+            >
+              Explainability (XAI)
+            </a>
+            <a
+              href="#methodology"
+              onClick={() => setMobileMenuOpen(false)}
+              className="hover:text-white py-1"
+            >
+              Auditing Scope
+            </a>
+          </div>
             <Link to="/analysis/new" onClick={() => setMobileMenuOpen(false)} className="w-full">
               <Button variant="primary" size="md" className="w-full">
                 Audit Contract (No Login)

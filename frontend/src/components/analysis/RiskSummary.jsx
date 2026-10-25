@@ -61,7 +61,7 @@ const RiskSummary = ({ contract }) => {
 
             <div className="flex items-center gap-2">
               <span className="text-xs px-2.5 py-1 rounded bg-slate-800 border border-slate-700 text-slate-300 font-mono">
-                Legal-BERT v1.2
+                {contract.metadata?.checkpointName || contract.modelDisclosures?.checkpointName || 'Legal-BERT'}
               </span>
             </div>
           </div>

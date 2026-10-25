@@ -131,7 +131,7 @@ const AnalysisProgress = ({
         <div className="mt-4 pt-4 border-t border-slate-800 text-center">
           <p className="text-[11px] text-slate-500 flex items-center justify-center gap-1.5">
             <ShieldCheck className="w-3.5 h-3.5 text-slate-400" />
-            Decision-support preview: UI representation of the planned AI analysis stages.
+            Decision-support preview: Live Legal-BERT AI analysis pipeline execution.
           </p>
         </div>
       </Card>

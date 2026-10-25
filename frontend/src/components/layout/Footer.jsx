@@ -57,8 +57,8 @@ const Footer = () => {
                 </Link>
               </li>
               <li>
-                <Link to="/login" className="hover:text-slate-200 transition-colors">
-                  Sign In
+                <Link to="/settings" className="hover:text-slate-200 transition-colors">
+                  Settings
                 </Link>
               </li>
             </ul>

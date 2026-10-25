@@ -466,6 +466,9 @@ def list_analyses(user_id: Optional[str] = None, query: str = "", risk_level: st
             "overallRiskLevel": row["risk_level"],
             "summary": row["summary"],
             "description": row["summary"],
+            "categories": json.loads(row["categories"]) if ("categories" in row.keys() and row["categories"]) else [],
+            "findings": json.loads(row["findings"]) if ("findings" in row.keys() and row["findings"]) else [],
+            "riskBreakdown": json.loads(row["risk_breakdown"]) if ("risk_breakdown" in row.keys() and row["risk_breakdown"]) else {},
             "auditDate": row["created_at"],
             "created_at": row["created_at"]
         })
@@ -885,7 +888,61 @@ def get_user_dashboard_stats(user_id: Optional[str] = None) -> Dict[str, Any]:
         cursor.execute("SELECT COUNT(*) AS low_count FROM analyses WHERE risk_level = 'Low'")
     low_count = cursor.fetchone()["low_count"] or 0
 
+    category_counts = {
+        "Termination": 0,
+        "Liability": 0,
+        "Payment / Financial": 0,
+        "Legal Compliance": 0,
+        "Privacy": 0
+    }
+    category_colors = {
+        "Termination": "#f97316",
+        "Liability": "#eab308",
+        "Payment / Financial": "#a855f7",
+        "Legal Compliance": "#3b82f6",
+        "Privacy": "#06b6d4"
+    }
+
+    if user_id:
+        cursor.execute("SELECT categories, findings FROM analyses WHERE user_id = ?", (user_id,))
+    else:
+        cursor.execute("SELECT categories, findings FROM analyses")
+    analysis_rows = cursor.fetchall()
+    for a_row in analysis_rows:
+        try:
+            findings_data = json.loads(a_row["findings"]) if a_row["findings"] else []
+            has_counted_from_findings = False
+            for f in findings_data:
+                cat_name = f.get("category")
+                if cat_name in category_counts:
+                    category_counts[cat_name] += 1
+                    has_counted_from_findings = True
+
+            if not has_counted_from_findings and a_row["categories"]:
+                cats_data = json.loads(a_row["categories"])
+                for c in cats_data:
+                    c_name = c.get("name")
+                    if c_name in category_counts:
+                        detected = c.get("detectedClauses")
+                        if detected is not None:
+                            category_counts[c_name] += int(detected)
+                        elif c.get("riskLevel") in ("High", "Critical"):
+                            category_counts[c_name] += 1
+        except Exception:
+            pass
+
     conn.close()
+
+    total_clauses = sum(category_counts.values())
+    distribution = [
+        {
+            "name": name,
+            "count": category_counts[name],
+            "percentage": round((category_counts[name] / total_clauses) * 100) if total_clauses > 0 else 0,
+            "color": category_colors[name]
+        }
+        for name in ["Termination", "Liability", "Payment / Financial", "Legal Compliance", "Privacy"]
+    ]
 
     recent = list_analyses(user_id=user_id, limit=5)
 
@@ -894,6 +951,8 @@ def get_user_dashboard_stats(user_id: Optional[str] = None) -> Dict[str, Any]:
         "averageRiskScore": avg_score,
         "highRiskCount": high_count,
         "lowRiskCount": low_count,
+        "totalClauses": total_clauses,
+        "categoryDistribution": distribution,
         "recentAnalyses": recent
     }
 

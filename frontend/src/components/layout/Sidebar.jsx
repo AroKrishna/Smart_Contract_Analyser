@@ -1,22 +1,17 @@
-import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { Link, NavLink } from 'react-router-dom';
 import {
   ShieldCheck,
   LayoutDashboard,
   PlusCircle,
   Clock,
   FileText,
-  User,
   Settings,
-  LogOut,
   X,
   Scale,
 } from 'lucide-react';
 import { APP_NAME } from '../../utils/constants';
-import { useAuth } from '../../context/AuthContext';
 
 const Sidebar = ({ isOpen, onClose }) => {
-  const navigate = useNavigate();
-  const { user, logout, isAuthenticated } = useAuth();
 
   const mainNavigation = [
     { name: 'Dashboard', to: '/dashboard', icon: LayoutDashboard },

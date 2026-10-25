@@ -13,12 +13,9 @@ import Badge from '../components/common/Badge';
 import Input from '../components/common/Input';
 import Button from '../components/common/Button';
 import EmptyState from '../components/common/EmptyState';
-import { mockReports } from '../data/mockData';
-import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 
 const Reports = () => {
-  const { isAuthenticated } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [downloadingId, setDownloadingId] = useState(null);
   const [liveReports, setLiveReports] = useState([]);
@@ -98,14 +95,18 @@ const Reports = () => {
       </div>
 
       {/* Reports Grid */}
-      {filteredReports.length === 0 ? (
+      {loading ? (
+        <Card className="border-slate-800 bg-slate-900/60 p-12 text-center text-slate-400">
+          <p className="text-xs">Loading audit reports from local database...</p>
+        </Card>
+      ) : filteredReports.length === 0 ? (
         <Card className="border-slate-800 bg-slate-900/60 p-8">
           <EmptyState
             title="No Reports Available"
             description={
-              isAuthenticated
-                ? "You have not submitted any smart contracts for audit yet. Initiate a new analysis to generate downloadable PDF and DOCX reports."
-                : "No reports match your search criteria."
+              searchQuery
+                ? "No audit reports match your search criteria."
+                : "You have not submitted any smart contracts for audit yet. Initiate a new analysis to generate downloadable PDF and DOCX reports."
             }
             actionLabel="Start New Analysis"
             actionLink="/analysis/new"
