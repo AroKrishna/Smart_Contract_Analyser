@@ -432,54 +432,6 @@ export const api = {
   },
 
   /**
-   * Phase 13: Admin Control Panel endpoints
-   */
-  async getAdminStats() {
-    return await request('/api/v1/admin/stats');
-  },
-
-  async getAdminUsers() {
-    return await request('/api/v1/admin/users');
-  },
-
-  async getAdminModelStatus() {
-    return await request('/api/v1/admin/model-status');
-  },
-
-  /**
-   * Local edition helper methods (single-user, no registration/session required)
-   */
-  async login() {
-    return { status: 'success', user: { id: 'local_user', name: 'Local Auditor', role: 'auditor' } };
-  },
-
-  async register() {
-    return { status: 'success', user: { id: 'local_user', name: 'Local Auditor', role: 'auditor' } };
-  },
-
-  async logout() {
-    return { status: 'success', message: 'Local session active' };
-  },
-
-  async getCurrentUser() {
-    return {
-      status: 'success',
-      user: { id: 'local_user', name: 'Local Auditor', email: 'auditor@local.device', role: 'auditor' },
-    };
-  },
-
-  async changePassword() {
-    return { status: 'success', message: 'Local edition does not use passwords.' };
-  },
-
-  async updateProfile(fullName, organization) {
-    return {
-      status: 'success',
-      user: { id: 'local_user', name: fullName || 'Local Auditor', organization: organization || 'Local Workspace', role: 'auditor' },
-    };
-  },
-
-  /**
    * Direct cache helper
    */
   cacheAnalysis(data) {

@@ -196,7 +196,7 @@ Open your browser at:
 
 ## 🖥️ Using the Application (No Account Required)
 
-1. **Direct Access**: When you open the application, you land directly on the **Auditor Workspace** dashboard. No login or registration screens appear.
+1. **Direct Access**: When you open `http://localhost:5173/`, you can explore the architecture and pipeline on the landing page, or click **Dashboard** / **Audit Contract** to enter the workspace directly. No login or registration screens appear.
 2. **Submit a Contract**: Click **New Audit** or navigate to `/analysis/new`. Either upload a `.sol` file or paste Solidity source code directly into the editor. Sample contract templates (Escrow, Vault, Token) are provided as quick-load buttons.
 3. **Run Analysis**: Click **Run Legal-BERT Analysis**. The live asynchronous stepper will track:
    - Syntax validation

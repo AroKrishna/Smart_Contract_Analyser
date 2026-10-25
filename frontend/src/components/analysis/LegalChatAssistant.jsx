@@ -1,12 +1,10 @@
 import { useState } from 'react';
 import {
-  MessageSquare,
   Send,
   Bot,
   User,
   Sparkles,
   ShieldCheck,
-  HelpCircle,
   Loader2,
 } from 'lucide-react';
 import Card from '../common/Card';

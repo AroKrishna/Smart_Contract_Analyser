@@ -1,5 +1,4 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 
 import PublicLayout from './layouts/PublicLayout';
@@ -17,8 +16,7 @@ function App() {
   return (
     <ThemeProvider>
       <BrowserRouter>
-        <AuthProvider>
-          <Routes>
+        <Routes>
           {/* Public Landing Route */}
           <Route element={<PublicLayout />}>
             <Route path="/" element={<Landing />} />
@@ -34,18 +32,11 @@ function App() {
             <Route path="/settings" element={<Settings />} />
           </Route>
 
-          {/* Obsolete Auth/Admin routes safely redirected to local dashboard */}
-          <Route path="/login" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/register" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/profile" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/admin" element={<Navigate to="/dashboard" replace />} />
-
           {/* Catch-all redirect */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </AuthProvider>
-    </BrowserRouter>
-  </ThemeProvider>
+      </BrowserRouter>
+    </ThemeProvider>
   );
 }
 

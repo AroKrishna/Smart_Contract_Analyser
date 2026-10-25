@@ -100,7 +100,7 @@ const Navbar = () => {
           </div>
             <Link to="/analysis/new" onClick={() => setMobileMenuOpen(false)} className="w-full">
               <Button variant="primary" size="md" className="w-full">
-                Audit Contract (No Login)
+                Audit Contract
               </Button>
             </Link>
         </div>
